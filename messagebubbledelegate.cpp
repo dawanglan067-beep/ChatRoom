@@ -471,8 +471,8 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         const QPixmap thumbnail = m_mediaThumbnailsByServerMessageId.value(serverMessageId);
         if (!thumbnail.isNull()) {
             const QPixmap scaled = thumbnail.scaled(previewRect.size(),
-                                                    Qt::KeepAspectRatioByExpanding,
-                                                    Qt::SmoothTransformation);
+                                                     Qt::KeepAspectRatioByExpanding,
+                                                     Qt::SmoothTransformation);
             painter->setClipRect(previewRect);
             painter->drawPixmap(previewRect.topLeft(), scaled,
                                 QRect((scaled.width() - previewRect.width()) / 2,
@@ -480,9 +480,26 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
                                       previewRect.width(),
                                       previewRect.height()));
             painter->setClipping(false);
+
+            if (!mediaName.isEmpty()) {
+                QFont nameFont = option.font;
+                nameFont.setPointSizeF(qMax(8.0, option.font.pointSizeF() - 1.0));
+                painter->setFont(nameFont);
+                painter->setPen(isSelf ? QColor(255, 255, 255, 200) : QColor(QStringLiteral("#64748B")));
+                const QRect nameRect(previewRect.left() + 6, previewRect.bottom() - 22,
+                                     previewRect.width() - 12, 18);
+                const QString elidedName = option.fontMetrics.elidedText(mediaName, Qt::ElideMiddle, nameRect.width());
+                painter->fillRect(QRect(nameRect.left() - 4, nameRect.top() - 2,
+                                        nameRect.width() + 8, nameRect.height() + 4),
+                                  QColor(0, 0, 0, 100));
+                painter->drawText(nameRect, Qt::AlignLeft | Qt::AlignVCenter, elidedName);
+            }
         } else {
-            painter->setPen(isSelf ? QColor(255, 255, 255, 210) : QColor(QStringLiteral("#64748B")));
-            painter->drawText(previewRect, Qt::AlignCenter, QStringLiteral("图片加载中..."));
+            QFont loadFont = option.font;
+            loadFont.setPointSizeF(qMax(9.0, option.font.pointSizeF()));
+            painter->setFont(loadFont);
+            painter->setPen(isSelf ? QColor(255, 255, 255, 150) : QColor(QStringLiteral("#9ca3af")));
+            painter->drawText(previewRect, Qt::AlignCenter, QStringLiteral("🖼 图片加载中..."));
         }
 
         contentRect.setTop(previewRect.bottom() + 8);

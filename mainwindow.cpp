@@ -647,6 +647,9 @@ void MainWindow::requestMediaThumbnail(qint64 serverMessageId, const QString &ra
     if (m_loadingMediaThumbnailIds.contains(serverMessageId)) {
         return;
     }
+    if (m_messageDelegate && m_messageDelegate->property("skipLoaded").toBool()) {
+        return;
+    }
 
     const QUrl url = MediaUtils::resolveMediaUrl(rawUrl, m_backendBaseUrl);
     if (!url.isValid()) {
@@ -655,6 +658,7 @@ void MainWindow::requestMediaThumbnail(qint64 serverMessageId, const QString &ra
 
     m_loadingMediaThumbnailIds.insert(serverMessageId);
     QNetworkRequest request(url);
+    request.setTransferTimeout(15000);
     if (!m_authToken.trimmed().isEmpty() && MediaUtils::isBackendUploadPath(url)) {
         request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(m_authToken).toUtf8());
     }
@@ -670,6 +674,11 @@ void MainWindow::requestMediaThumbnail(qint64 serverMessageId, const QString &ra
         QPixmap pixmap;
         if (!pixmap.loadFromData(bytes)) {
             return;
+        }
+
+        const int maxSize = 400;
+        if (pixmap.width() > maxSize || pixmap.height() > maxSize) {
+            pixmap = pixmap.scaled(maxSize, maxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
 
         m_messageDelegate->setMediaThumbnail(serverMessageId, pixmap);
