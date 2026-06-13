@@ -20,9 +20,7 @@ namespace
 {
 QString compactJson(const QJsonObject &payload)
 {
-    const QByteArray utf8 = QJsonDocument(payload).toJson(QJsonDocument::Compact);
-    qDebug() << "WebSocket JSON bytes:" << utf8.toHex();
-    return QString::fromUtf8(utf8);
+    return QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
 }
 
 constexpr int kReconnectInitialDelayMs = 1000;
