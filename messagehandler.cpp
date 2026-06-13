@@ -266,11 +266,7 @@ void MessageHandler::handleJsonMessageReceived(const QJsonObject &payload)
     }
 
     if (type == QStringLiteral("message_created")) {
-        const QString conversationId = payload.value(QStringLiteral("conversationId")).toString();
-        const QJsonObject messageObject = payload.value(QStringLiteral("message")).toObject();
-        const Message message = ChatUtils::messageFromBackendPayload(messageObject, QString());
-        m_chatStore->appendMessageToConversation(conversationId, message);
-        emit messageReceived(conversationId, message);
+        processMessageCreated(payload, m_loggedInEmail);
         return;
     }
 

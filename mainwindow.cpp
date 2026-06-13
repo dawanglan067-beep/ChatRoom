@@ -1553,7 +1553,7 @@ void MainWindow::setupUi()
         QStringLiteral("QPushButton { font-size: 20px; border: none; border-radius: 18px; background: #f3f4f6; }"
                         "QPushButton:hover { background: #e5e7eb; }"));
 
-    m_emojiPicker = new EmojiPicker(this);
+    m_emojiPicker = new EmojiPicker(chatFrame);
 
     m_replyBar = new QFrame(chatFrame);
     m_replyBar->setObjectName(QStringLiteral("headerFrame"));
@@ -1586,6 +1586,7 @@ void MainWindow::setupUi()
     chatLayout->addWidget(headerFrame);
     chatLayout->addWidget(searchFrame);
     chatLayout->addWidget(m_replyBar);
+    chatLayout->addWidget(m_emojiPicker);
     chatLayout->addWidget(m_messageListView, 1);
     chatLayout->addWidget(composerFrame);
 
@@ -1658,18 +1659,11 @@ void MainWindow::setupConnections()
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCurrentMessage);
     connect(m_sendFileButton, &QPushButton::clicked, this, &MainWindow::sendMediaFile);
     connect(m_emojiButton, &QPushButton::clicked, this, [this]() {
-        if (m_emojiPicker->isVisible()) {
-            m_emojiPicker->hide();
-        } else {
-            const QPoint pos = m_emojiButton->mapToGlobal(QPoint(0, m_emojiButton->height()));
-            m_emojiPicker->move(pos);
-            m_emojiPicker->show();
-        }
+        m_emojiPicker->setVisible(!m_emojiPicker->isVisible());
     });
     connect(m_emojiPicker, &EmojiPicker::emojiSelected, this, [this](const QString &emoji) {
         m_messageInput->insert(emoji);
         m_messageInput->setFocus();
-        m_emojiPicker->hide();
     });
     connect(m_replyCancelButton, &QPushButton::clicked, this, &MainWindow::cancelReply);
     connect(m_messageInput, &QLineEdit::returnPressed, this, &MainWindow::sendCurrentMessage);
