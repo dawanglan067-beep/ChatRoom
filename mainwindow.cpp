@@ -619,6 +619,21 @@ void MainWindow::recallMessageByIndex(const QModelIndex &index)
         return;
     }
 
+    const QString content = index.data(MessageListModel::ContentRole).toString();
+    const int maxPreviewLen = 30;
+    const QString preview = content.length() > maxPreviewLen
+        ? content.left(maxPreviewLen) + QStringLiteral("...")
+        : content;
+
+    const auto decision = QMessageBox::question(
+        this,
+        QStringLiteral("撤回消息"),
+        QStringLiteral("确定要撤回这条消息吗？\n\n\"%1\"").arg(preview));
+
+    if (decision != QMessageBox::Yes) {
+        return;
+    }
+
     m_chatClient->recallMessage(conversationId, serverMessageId);
     setNetworkStatus(UiText::MainWindow::kStatusRecallRequested,
                      QStringLiteral("消息 ID: %1").arg(serverMessageId));
