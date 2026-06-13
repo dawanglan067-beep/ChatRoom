@@ -30,7 +30,6 @@ const EmojiCategory categories[] = {
 EmojiPicker::EmojiPicker(QWidget *parent)
     : QWidget(parent)
 {
-    setFixedHeight(200);
     setVisible(false);
 
     auto *mainLayout = new QVBoxLayout(this);

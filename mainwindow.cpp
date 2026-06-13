@@ -1586,9 +1586,12 @@ void MainWindow::setupUi()
     chatLayout->addWidget(headerFrame);
     chatLayout->addWidget(searchFrame);
     chatLayout->addWidget(m_replyBar);
-    chatLayout->addWidget(m_emojiPicker);
     chatLayout->addWidget(m_messageListView, 1);
     chatLayout->addWidget(composerFrame);
+
+    m_emojiPicker = new EmojiPicker(chatFrame);
+    m_emojiPicker->setFixedHeight(200);
+    m_emojiPicker->setVisible(false);
 
     rootLayout->addWidget(sidebarFrame);
     rootLayout->addWidget(chatFrame, 1);
@@ -1659,7 +1662,18 @@ void MainWindow::setupConnections()
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCurrentMessage);
     connect(m_sendFileButton, &QPushButton::clicked, this, &MainWindow::sendMediaFile);
     connect(m_emojiButton, &QPushButton::clicked, this, [this]() {
-        m_emojiPicker->setVisible(!m_emojiPicker->isVisible());
+        if (m_emojiPicker->isVisible()) {
+            m_emojiPicker->hide();
+        } else {
+            QWidget *chatFrame = m_messageListView->parentWidget();
+            if (chatFrame) {
+                m_emojiPicker->setFixedWidth(m_messageListView->width());
+                m_emojiPicker->move(m_messageListView->x(),
+                                    m_sendButton->y() - m_emojiPicker->height() - 8);
+                m_emojiPicker->raise();
+                m_emojiPicker->show();
+            }
+        }
     });
     connect(m_emojiPicker, &EmojiPicker::emojiSelected, this, [this](const QString &emoji) {
         m_messageInput->insert(emoji);
