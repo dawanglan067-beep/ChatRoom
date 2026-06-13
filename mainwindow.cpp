@@ -1288,6 +1288,9 @@ void MainWindow::scrollMessagesToBottom()
     QTimer::singleShot(0, this, [this]() {
         if (m_messageListView) {
             m_messageListView->scrollToBottom();
+            if (m_messageListView->viewport()) {
+                m_messageListView->viewport()->update();
+            }
         }
     });
 }
@@ -1592,6 +1595,8 @@ void MainWindow::setupUi()
     m_emojiPicker = new EmojiPicker(chatFrame);
     m_emojiPicker->setFixedHeight(200);
     m_emojiPicker->setVisible(false);
+    m_emojiPicker->move(0, 0);
+    m_emojiPicker->resize(0, 0);
 
     rootLayout->addWidget(sidebarFrame);
     rootLayout->addWidget(chatFrame, 1);
@@ -1667,9 +1672,13 @@ void MainWindow::setupConnections()
         } else {
             QWidget *chatFrame = m_messageListView->parentWidget();
             if (chatFrame) {
+                const int pickerHeight = 200;
+                m_emojiPicker->setFixedHeight(pickerHeight);
                 m_emojiPicker->setFixedWidth(m_messageListView->width());
+                const QPoint sendBtnGlobal = m_sendButton->mapToGlobal(QPoint(0, 0));
+                const QPoint chatFrameGlobal = chatFrame->mapToGlobal(QPoint(0, 0));
                 m_emojiPicker->move(m_messageListView->x(),
-                                    m_sendButton->y() - m_emojiPicker->height() - 8);
+                                    sendBtnGlobal.y() - chatFrameGlobal.y() - pickerHeight - 4);
                 m_emojiPicker->raise();
                 m_emojiPicker->show();
             }
@@ -1873,6 +1882,9 @@ void MainWindow::setupConnections()
                 }
                 scrollMessagesToBottom();
                 refreshMessageSearchMatches(false);
+                if (m_messageListView && m_messageListView->viewport()) {
+                    m_messageListView->viewport()->update();
+                }
             });
     connect(m_messageModel, &QAbstractItemModel::modelReset, this, [this]() {
         refreshMessageSearchMatches(false);
