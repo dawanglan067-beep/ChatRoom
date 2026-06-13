@@ -397,6 +397,34 @@ void MainWindow::restoreDraftForConversation(const QString &conversationId)
 void MainWindow::loadDraftsFromSettings()
 {
     m_messageHandler->loadDraftsFromSettings();
+
+    if (m_loggedInUserEmail.trimmed().isEmpty()) {
+        return;
+    }
+
+    QSettings settings(QStringLiteral("ChatRoom"), QStringLiteral("ChatRoomClient"));
+    const QString key = QStringLiteral("drafts/%1").arg(m_loggedInUserEmail.trimmed().toLower());
+    const QByteArray raw = settings.value(key).toByteArray();
+    if (raw.isEmpty()) {
+        return;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(raw, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return;
+    }
+
+    const QJsonObject object = document.object();
+    for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
+        const QString conversationId = it.key().trimmed();
+        const QString draft = it.value().toString();
+        if (conversationId.isEmpty() || draft.trimmed().isEmpty()) {
+            continue;
+        }
+        m_messageHandler->saveDraft(conversationId, draft);
+        m_chatStore->setConversationDraft(conversationId, draft);
+    }
 }
 
 void MainWindow::persistDraftsToSettings() const
@@ -2894,9 +2922,12 @@ void MainWindow::updateProfileAvatarBadge()
                 if (!bytes.isEmpty()) {
                     QPixmap pixmap;
                     if (pixmap.loadFromData(bytes)) {
-                        const QPixmap scaled = pixmap.scaled(42, 42, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                        m_profileAvatarLabel->setPixmap(scaled);
-                        m_profileAvatarLabel->setStyleSheet(QStringLiteral("border-radius: 21px;"));
+                        const QPixmap scaled = pixmap.scaled(42, 42, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+                        const int side = qMin(scaled.width(), scaled.height());
+                        const QRect crop((scaled.width() - side) / 2, (scaled.height() - side) / 2, side, side);
+                        m_profileAvatarLabel->setPixmap(scaled.copy(crop));
+                        m_profileAvatarLabel->setStyleSheet(
+                            QStringLiteral("border-radius: 21px; background: transparent;"));
                         return;
                     }
                 }
