@@ -457,75 +457,6 @@ void MessageHandler::editMessage(const QString &conversationId, qint64 messageId
     emit networkStatusChanged(UiText::MessageHandler::kEditNotSupported);
 }
 
-void MessageHandler::preloadMediaThumbnails(const QString &backendBaseUrl, const QString &conversationId)
-{
-    if (backendBaseUrl.isEmpty() || conversationId.isEmpty()) {
-        return;
-    }
-
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::requestMediaThumbnail(const QString &backendBaseUrl, qint64 serverMessageId, const QString &rawUrl)
-{
-    if (backendBaseUrl.isEmpty() || serverMessageId <= 0 || rawUrl.isEmpty()) {
-        return;
-    }
-
-    if (m_loadingMediaThumbnailIds.contains(serverMessageId)) {
-        return;
-    }
-
-    m_loadingMediaThumbnailIds.insert(serverMessageId);
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::preloadMessageAvatars(const QString &backendBaseUrl, const QString &conversationId)
-{
-    if (backendBaseUrl.isEmpty() || conversationId.isEmpty()) {
-        return;
-    }
-
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::requestMessageAvatar(const QString &backendBaseUrl, const QString &rawUrl, const QString &cacheKey)
-{
-    if (backendBaseUrl.isEmpty() || rawUrl.isEmpty()) {
-        return;
-    }
-
-    const QString normalizedUrl = rawUrl.trimmed();
-    if (m_loadingAvatarUrls.contains(normalizedUrl) || m_loadedAvatarUrls.contains(normalizedUrl)) {
-        return;
-    }
-
-    m_loadingAvatarUrls.insert(normalizedUrl);
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::refreshMessageSearchMatches(bool scrollToCurrent)
-{
-    Q_UNUSED(scrollToCurrent);
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::jumpMessageSearchMatch(int step)
-{
-    Q_UNUSED(step);
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::updateMessageSearchUi()
-{
-    Q_UNIMPLEMENTED();
-}
-
-void MessageHandler::showQueuedMessagesDialog()
-{
-    Q_UNIMPLEMENTED();
-}
-
 void MessageHandler::focusMessageByServerIdInConversation(const QString &conversationId, qint64 serverMessageId)
 {
     if (conversationId.trimmed().isEmpty() || serverMessageId <= 0) {
@@ -543,11 +474,6 @@ void MessageHandler::focusMessageByServerIdInConversation(const QString &convers
             return;
         }
     }
-}
-
-void MessageHandler::showFavoriteMessagesDialog()
-{
-    Q_UNIMPLEMENTED();
 }
 
 void MessageHandler::refreshFavoriteHighlights()

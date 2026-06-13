@@ -5,14 +5,11 @@
 #include <QString>
 #include <QHash>
 #include <QTimer>
-#include <QSet>
-#include <QPixmap>
 
 class ChatStore;
 class ChatClient;
 class NetworkService;
 class Message;
-class QModelIndex;
 class QNetworkAccessManager;
 class QWidget;
 
@@ -45,16 +42,7 @@ public:
 
     void searchMessages(const QString &backendBaseUrl, const QString &keyword);
     void editMessage(const QString &conversationId, qint64 messageId, const QString &newContent);
-    void preloadMediaThumbnails(const QString &backendBaseUrl, const QString &conversationId);
-    void requestMediaThumbnail(const QString &backendBaseUrl, qint64 serverMessageId, const QString &rawUrl);
-    void preloadMessageAvatars(const QString &backendBaseUrl, const QString &conversationId);
-    void requestMessageAvatar(const QString &backendBaseUrl, const QString &rawUrl, const QString &cacheKey);
-    void refreshMessageSearchMatches(bool scrollToCurrent = true);
-    void jumpMessageSearchMatch(int step);
-    void updateMessageSearchUi();
-    void showQueuedMessagesDialog();
     void focusMessageByServerIdInConversation(const QString &conversationId, qint64 serverMessageId);
-    void showFavoriteMessagesDialog();
     void refreshFavoriteHighlights();
     void appendSystemMessage(const QString &text);
     void joinCurrentRoomIfConnected();
@@ -98,11 +86,5 @@ private:
     QHash<QString, QString> m_pendingMessageConversationIds;
     QHash<QString, qint64> m_lastReadAckMessageIds;
     QHash<QString, QHash<QString, QString>> m_typingUsersByConversationId;
-    QSet<qint64> m_loadingMediaThumbnailIds;
-    QSet<QString> m_loadingAvatarUrls;
-    QSet<QString> m_loadedAvatarUrls;
-    QHash<QString, QPixmap> m_avatarPixmapsByUrl;
-    QList<int> m_messageSearchMatches;
-    int m_messageSearchCurrentIndex = -1;
     int m_messageLoadSerial = 0;
 };
