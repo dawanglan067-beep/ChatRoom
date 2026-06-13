@@ -21,6 +21,8 @@ public:
     explicit MessageHandler(ChatStore *chatStore, ChatClient *chatClient, NetworkService *networkService, QObject *parent = nullptr);
     ~MessageHandler() override;
 
+    void setLoggedInEmail(const QString &email);
+
     void loadMessages(const QString &backendBaseUrl, int index, qint64 beforeId = 0, bool prepend = false);
     void sendMessage(const QString &text, const QString &conversationId);
     void sendMediaFile(const QString &backendBaseUrl, const QString &filePath, const QString &conversationId, QWidget *parent = nullptr);
@@ -80,6 +82,7 @@ private:
     ChatClient *m_chatClient = nullptr;
     NetworkService *m_networkService = nullptr;
 
+    QString m_loggedInEmail;
     QHash<QString, QString> m_conversationDrafts;
     QHash<QString, QJsonObject> m_favoriteMessagesByKey;
     QHash<QString, QTimer *> m_pendingMessageTimers;

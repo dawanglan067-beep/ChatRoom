@@ -208,6 +208,7 @@ void MainWindow::setAuthSession(const QString &backendBaseUrl, const QString &au
 
     m_networkService->setAuthToken(m_authToken);
     m_networkService->setBackendBaseUrl(m_backendBaseUrl);
+    m_messageHandler->setLoggedInEmail(m_loggedInUserEmail);
 
     if (m_databaseManager->open(m_loggedInUserEmail)) {
         const QList<Conversation> cached = m_databaseManager->loadConversations();

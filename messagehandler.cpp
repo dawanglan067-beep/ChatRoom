@@ -41,6 +41,11 @@ MessageHandler::MessageHandler(ChatStore *chatStore, ChatClient *chatClient, Net
 
 MessageHandler::~MessageHandler() = default;
 
+void MessageHandler::setLoggedInEmail(const QString &email)
+{
+    m_loggedInEmail = email.trimmed().toLower();
+}
+
 void MessageHandler::loadMessages(const QString &backendBaseUrl, int index, qint64 beforeId, bool prepend)
 {
     const Conversation *conversation = m_chatStore->conversationAt(index);
@@ -272,8 +277,18 @@ void MessageHandler::handleJsonMessageReceived(const QJsonObject &payload)
     if (type == QStringLiteral("message_recalled")) {
         const QString conversationId = payload.value(QStringLiteral("conversationId")).toString().trimmed();
         const qint64 messageId = payload.value(QStringLiteral("messageId")).toInteger();
-        processMessageRecalled(payload, QString());
+        processMessageRecalled(payload, m_loggedInEmail);
         emit messageRecalled(conversationId, messageId);
+        return;
+    }
+
+    if (type == QStringLiteral("conversation_read")) {
+        processConversationRead(payload, m_loggedInEmail);
+        return;
+    }
+
+    if (type == QStringLiteral("typing_state")) {
+        processTypingState(payload, m_loggedInEmail);
         return;
     }
 
@@ -605,6 +620,7 @@ void MessageHandler::processMessageCreated(const QJsonObject &payload, const QSt
 
 void MessageHandler::processMessageRecalled(const QJsonObject &payload, const QString &loggedInEmail)
 {
+    const QString effectiveEmail = loggedInEmail.isEmpty() ? m_loggedInEmail : loggedInEmail;
     const QString conversationId = payload.value(QStringLiteral("conversationId")).toString().trimmed();
     const qint64 messageId = payload.value(QStringLiteral("messageId")).toInteger(0);
     const QJsonObject messageObject = payload.value(QStringLiteral("message")).toObject();
@@ -622,7 +638,7 @@ void MessageHandler::processMessageRecalled(const QJsonObject &payload, const QS
 
     const QString recalledByEmail = payload.value(QStringLiteral("recalledByEmail")).toString().trimmed();
     const QString recalledByNickname = payload.value(QStringLiteral("recalledByNickname")).toString().trimmed();
-    const bool recalledBySelf = recalledByEmail.compare(loggedInEmail, Qt::CaseInsensitive) == 0;
+    const bool recalledBySelf = recalledByEmail.compare(effectiveEmail, Qt::CaseInsensitive) == 0;
     const QString recallDetail = recalledBySelf
         ? UiText::MainWindow::kRecalledBySelfMessage
         : UiText::MainWindow::kRecalledByUserPattern.arg(recalledByNickname.isEmpty() ? recalledByEmail : recalledByNickname);
@@ -644,7 +660,12 @@ void MessageHandler::processConversationRead(const QJsonObject &payload, const Q
         return;
     }
 
-    const bool readBySelf = readerEmail.compare(loggedInEmail, Qt::CaseInsensitive) == 0;
+    const QString effectiveEmail = loggedInEmail.isEmpty() ? m_loggedInEmail : loggedInEmail;
+    if (effectiveEmail.isEmpty()) {
+        return;
+    }
+
+    const bool readBySelf = readerEmail.compare(effectiveEmail, Qt::CaseInsensitive) == 0;
     if (readBySelf) {
         m_chatStore->markConversationReadById(conversationId);
         const qint64 currentAck = m_lastReadAckMessageIds.value(conversationId, 0);
@@ -659,6 +680,7 @@ void MessageHandler::processConversationRead(const QJsonObject &payload, const Q
 
 void MessageHandler::processTypingState(const QJsonObject &payload, const QString &loggedInEmail)
 {
+    const QString effectiveEmail = loggedInEmail.isEmpty() ? m_loggedInEmail : loggedInEmail;
     const QString conversationId = payload.value(QStringLiteral("conversationId")).toString().trimmed();
     const QString userEmail = payload.value(QStringLiteral("userEmail")).toString().trimmed().toLower();
     const QString userNickname = payload.value(QStringLiteral("userNickname")).toString().trimmed();
@@ -667,7 +689,7 @@ void MessageHandler::processTypingState(const QJsonObject &payload, const QStrin
         return;
     }
 
-    if (userEmail.compare(loggedInEmail.trimmed().toLower(), Qt::CaseInsensitive) == 0) {
+    if (effectiveEmail.isEmpty() || userEmail.compare(effectiveEmail, Qt::CaseInsensitive) == 0) {
         return;
     }
 
