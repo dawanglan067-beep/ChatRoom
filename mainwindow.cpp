@@ -2165,6 +2165,31 @@ void MainWindow::showProfileDialog()
     avatarLabel->setStyleSheet(
         QStringLiteral("background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #60A5FA, stop:1 #2563EB);"
                         "color: white; border-radius: 44px; font-size: 28px; font-weight: 900;"));
+
+    if (!m_loggedInUserAvatarUrl.trimmed().isEmpty() && m_networkService && m_networkService->networkManager()) {
+        const QUrl avatarUrl = MediaUtils::resolveMediaUrl(m_loggedInUserAvatarUrl.trimmed(), m_backendBaseUrl);
+        if (avatarUrl.isValid()) {
+            QNetworkRequest request(avatarUrl);
+            if (!m_authToken.trimmed().isEmpty() && MediaUtils::isBackendUploadPath(avatarUrl)) {
+                request.setRawHeader("Authorization", QStringLiteral("Bearer %1").arg(m_authToken).toUtf8());
+            }
+            QNetworkReply *reply = m_networkService->networkManager()->get(request);
+            connect(reply, &QNetworkReply::finished, &dialog, [reply, avatarLabel]() {
+                const QByteArray bytes = reply->readAll();
+                reply->deleteLater();
+                if (!bytes.isEmpty()) {
+                    QPixmap pixmap;
+                    if (pixmap.loadFromData(bytes)) {
+                        const int side = qMin(pixmap.width(), pixmap.height());
+                        const QRect crop((pixmap.width() - side) / 2, (pixmap.height() - side) / 2, side, side);
+                        avatarLabel->setPixmap(pixmap.copy(crop).scaled(88, 88, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+                        avatarLabel->setStyleSheet(QStringLiteral("border-radius: 44px; background: transparent;"));
+                    }
+                }
+            });
+        }
+    }
+
     layout->addWidget(avatarLabel);
 
     auto *nicknameEdit = new QLineEdit(m_loggedInUserNickname, &dialog);
@@ -2676,7 +2701,6 @@ void MainWindow::onConversationSelected(const QModelIndex &current, const QModel
     }
 
     refreshConversationHeader();
-    loadConversationData();
 }
 
 void MainWindow::handleMessageActivated(const QModelIndex &index)
