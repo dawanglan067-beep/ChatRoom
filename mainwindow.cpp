@@ -7,6 +7,7 @@
 #include "conversationitemdelegate.h"
 #include "conversationlistmodel.h"
 #include "conversationmanager.h"
+#include "databasemanager.h"
 #include "mediautils.h"
 #include "messagebubbledelegate.h"
 #include "messagehandler.h"
@@ -164,6 +165,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_conversationManager(new ConversationManager(m_chatStore, m_networkService, this))
     , m_messageHandler(new MessageHandler(m_chatStore, m_chatClient, m_networkService, this))
     , m_profileManager(new ProfileManager(m_networkService, m_chatClient, this))
+    , m_databaseManager(new DatabaseManager(this))
 {
     setupUi();
     setupConnections();
@@ -205,6 +207,14 @@ void MainWindow::setAuthSession(const QString &backendBaseUrl, const QString &au
 
     m_networkService->setAuthToken(m_authToken);
     m_networkService->setBackendBaseUrl(m_backendBaseUrl);
+
+    if (m_databaseManager->open(m_loggedInUserEmail)) {
+        const QList<Conversation> cached = m_databaseManager->loadConversations();
+        if (!cached.isEmpty()) {
+            m_chatStore->replaceConversations(cached);
+            syncInitialSelection();
+        }
+    }
 
     loadCurrentUserProfile();
     loadConversationData();
@@ -1629,6 +1639,29 @@ void MainWindow::setupConnections()
             &MainWindow::onConversationSelected);
     connect(m_chatStore, &ChatStore::currentConversationChanged, this,
             &MainWindow::refreshConversationHeader);
+    connect(m_chatStore, &ChatStore::conversationsReset, this, [this]() {
+        if (m_databaseManager && m_databaseManager->isOpen()) {
+            m_databaseManager->saveConversations(m_chatStore->conversations());
+        }
+    });
+    connect(m_chatStore, &ChatStore::messageAppended, this, [this](int index) {
+        if (m_databaseManager && m_databaseManager->isOpen()) {
+            const Conversation *conv = m_chatStore->currentConversation();
+            const Message *msg = m_chatStore->messageAt(index);
+            if (conv && msg) {
+                m_databaseManager->appendMessage(conv->id, *msg);
+            }
+        }
+    });
+    connect(m_chatStore, &ChatStore::messageUpdated, this, [this](int index) {
+        if (m_databaseManager && m_databaseManager->isOpen()) {
+            const Conversation *conv = m_chatStore->currentConversation();
+            const Message *msg = m_chatStore->messageAt(index);
+            if (conv && msg && msg->serverMessageId > 0) {
+                m_databaseManager->updateMessage(conv->id, msg->serverMessageId, *msg);
+            }
+        }
+    });
     connect(m_chatStore, &ChatStore::conversationUpdated, this, [this](int row) {
         if (row == m_chatStore->currentConversationIndex()) {
             refreshConversationHeader();
@@ -1856,6 +1889,14 @@ void MainWindow::loadMessagesForConversation(int index, qint64 beforeId, bool pr
 
     const QString conversationId = conversation->id;
     MessagePaginationState &paginationState = m_messagePaginationStates[conversationId];
+
+    if (!prepend && m_databaseManager && m_databaseManager->isOpen()) {
+        const QList<Message> cached = m_databaseManager->loadMessages(conversationId);
+        if (!cached.isEmpty()) {
+            m_chatStore->replaceMessagesForConversation(index, cached);
+        }
+    }
+
     if (prepend && paginationState.isLoadingOlder) {
         return;
     }
@@ -1915,6 +1956,13 @@ void MainWindow::loadMessagesForConversation(int index, qint64 beforeId, bool pr
         const bool dataChanged = prepend
             ? m_chatStore->prependMessagesForConversation(index, std::move(messages))
             : m_chatStore->replaceMessagesForConversation(index, std::move(messages));
+
+        if (dataChanged && m_databaseManager && m_databaseManager->isOpen()) {
+            const Conversation *updatedConv = m_chatStore->conversationAt(index);
+            if (updatedConv) {
+                m_databaseManager->saveMessages(conversationId, updatedConv->messages);
+            }
+        }
 
         const QJsonObject pagination = result.body.value(QStringLiteral("pagination")).toObject();
         const bool protocolHasMore = pagination.value(QStringLiteral("hasMore")).toBool(items.size() >= kMessagePageSize);

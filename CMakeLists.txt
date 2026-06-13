@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(ChatRoom LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network Sql)
 find_package(Qt6 6.5 QUIET COMPONENTS WebSockets)
 
 qt_standard_project_setup()
@@ -25,6 +25,8 @@ qt_add_executable(ChatRoom
     conversationlistmodel.h
     conversationmanager.cpp
     conversationmanager.h
+    databasemanager.cpp
+    databasemanager.h
     main.cpp
     mediautils.cpp
     mediautils.h
@@ -53,6 +55,7 @@ target_link_libraries(ChatRoom
         Qt::Core
         Qt::Widgets
         Qt::Network
+        Qt::Sql
 )
 
 if(WIN32)

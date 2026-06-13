@@ -12,6 +12,7 @@
 
 class ChatClient;
 class ChatStore;
+class DatabaseManager;
 class ConversationListModel;
 class ConversationItemDelegate;
 class MessageBubbleDelegate;
@@ -138,6 +139,7 @@ private:
 
     ChatClient *m_chatClient = nullptr;
     ChatStore *m_chatStore = nullptr;
+    DatabaseManager *m_databaseManager = nullptr;
     ConversationListModel *m_conversationModel = nullptr;
     ConversationItemDelegate *m_conversationDelegate = nullptr;
     MessageListModel *m_messageModel = nullptr;
