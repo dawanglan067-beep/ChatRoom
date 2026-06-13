@@ -296,9 +296,6 @@ bool ChatStore::setConversationDraft(const QString &conversationId, const QStrin
 
         conversation.draftText = normalizedDraft;
         emit conversationUpdated(index);
-        if (index == m_currentConversationIndex) {
-            emit currentConversationChanged();
-        }
         return true;
     }
 
