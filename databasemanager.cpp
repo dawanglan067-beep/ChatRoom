@@ -3,6 +3,7 @@
 #include "message.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QRegularExpression>
 #include <QSqlDatabase>
@@ -23,6 +24,11 @@ DatabaseManager::~DatabaseManager()
 bool DatabaseManager::open(const QString &userEmail)
 {
     if (userEmail.trimmed().isEmpty()) {
+        return false;
+    }
+
+    if (!QSqlDatabase::isDriverAvailable(QStringLiteral("QSQLITE"))) {
+        qWarning() << "QSQLITE driver not available, database persistence disabled";
         return false;
     }
 
