@@ -280,8 +280,10 @@ void MainWindow::sendCurrentMessage()
     m_chatClient->sendChatMessage(messageText, conversationId, clientMessageId);
     m_messageInput->clear();
     sendTypingState(false);
-    saveDraftForConversation(conversationId, QString());
-    cancelReply();
+    QTimer::singleShot(0, this, [this, conversationId]() {
+        saveDraftForConversation(conversationId, QString());
+        cancelReply();
+    });
 }
 
 void MainWindow::sendMediaFile()
@@ -1864,7 +1866,7 @@ void MainWindow::setupConnections()
                 if (first == 0 && m_chatStore->currentMessageCount() > 1) {
                     return;
                 }
-                scrollMessagesToBottom();
+                QTimer::singleShot(50, this, &MainWindow::scrollMessagesToBottom);
                 refreshMessageSearchMatches(false);
             });
     connect(m_messageModel, &QAbstractItemModel::modelReset, this, [this]() {
