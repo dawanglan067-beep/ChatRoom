@@ -270,8 +270,11 @@ void MessageBubbleDelegate::clearMediaThumbnails()
 }
 
 void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
-                                  const QModelIndex &index) const
+                                   const QModelIndex &index) const
 {
+    if (!index.isValid() || !painter) {
+        return;
+    }
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
 
@@ -586,8 +589,11 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
 }
 
 QSize MessageBubbleDelegate::sizeHint(const QStyleOptionViewItem &option,
-                                      const QModelIndex &index) const
+                                       const QModelIndex &index) const
 {
+    if (!index.isValid()) {
+        return QSize(0, 0);
+    }
     const QString content = index.data(MessageListModel::ContentRole).toString();
     const bool isSelf = index.data(MessageListModel::IsSelfRole).toBool();
     const QString senderId = index.data(MessageListModel::SenderIdRole).toString();
