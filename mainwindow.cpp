@@ -1625,7 +1625,7 @@ QString MainWindow::styleSheet()
         "QListView#conversationListView { border: none; background: transparent; outline: none; }"
         "QListView#conversationListView::item { background: #f8fafc; border-radius: 16px; margin: 2px 0; }"
         "QListView#conversationListView::item:selected { background: #dbeafe; color: #0f172a; }"
-        "QListView#messageListView { border: none; background: #f8fafc; border-radius: 22px; outline: none; padding: 10px 0; }";
+        "QListView#messageListView { border: none; background: #f8fafc; outline: none; padding: 10px 0; }";
 
     const QString inputs =
         "QLineEdit#messageInput, QLineEdit#serverUrlInput, QLineEdit#messageSearchInput { min-height: 46px; border: 1px solid #d1d5db; border-radius: 18px; padding: 0 16px; background: #ffffff; color: #111827; }"
