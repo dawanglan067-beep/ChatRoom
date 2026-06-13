@@ -27,6 +27,8 @@ qt_add_executable(ChatRoom
     conversationmanager.h
     databasemanager.cpp
     databasemanager.h
+    emojipicker.cpp
+    emojipicker.h
     main.cpp
     mediautils.cpp
     mediautils.h

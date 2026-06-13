@@ -13,6 +13,7 @@
 class ChatClient;
 class ChatStore;
 class DatabaseManager;
+class EmojiPicker;
 class ConversationListModel;
 class ConversationItemDelegate;
 class MessageBubbleDelegate;
@@ -25,6 +26,7 @@ class QLabel;
 class QLineEdit;
 class QListView;
 class QListWidget;
+class QFrame;
 class QMessageBox;
 class QHttpMultiPart;
 class QPushButton;
@@ -204,4 +206,16 @@ private:
     QPushButton *m_favoriteMessagesButton = nullptr;
     QPushButton *m_sendFileButton = nullptr;
     QPushButton *m_sendButton = nullptr;
+    QPushButton *m_emojiButton = nullptr;
+    EmojiPicker *m_emojiPicker = nullptr;
+
+    QFrame *m_replyBar = nullptr;
+    QLabel *m_replyPreviewLabel = nullptr;
+    QPushButton *m_replyCancelButton = nullptr;
+    qint64 m_replyToMessageId = 0;
+    QString m_replyToContent;
+    QString m_replyToSender;
+
+    void startReply(qint64 messageId, const QString &content, const QString &sender);
+    void cancelReply();
 };

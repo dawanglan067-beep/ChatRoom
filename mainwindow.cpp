@@ -8,6 +8,7 @@
 #include "conversationlistmodel.h"
 #include "conversationmanager.h"
 #include "databasemanager.h"
+#include "emojipicker.h"
 #include "mediautils.h"
 #include "messagebubbledelegate.h"
 #include "messagehandler.h"
@@ -241,7 +242,14 @@ void MainWindow::sendCurrentMessage()
 
     const QString clientMessageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const QString conversationId = currentRoomId();
-    if (!m_chatStore->addPendingMessageToCurrentChat(messageText, clientMessageId)) {
+
+    QString displayContent = messageText;
+    if (m_replyToMessageId > 0) {
+        displayContent = QStringLiteral("↩ 回复 %1: %2\n%3")
+            .arg(m_replyToSender, m_replyToContent.left(60), messageText);
+    }
+
+    if (!m_chatStore->addPendingMessageToCurrentChat(displayContent, clientMessageId)) {
         return;
     }
     m_pendingMessageConversationIds.insert(clientMessageId, conversationId);
@@ -255,6 +263,7 @@ void MainWindow::sendCurrentMessage()
         m_messageInput->clear();
         sendTypingState(false);
         saveDraftForConversation(conversationId, QString());
+        cancelReply();
         return;
     }
 
@@ -263,6 +272,7 @@ void MainWindow::sendCurrentMessage()
     m_messageInput->clear();
     sendTypingState(false);
     saveDraftForConversation(conversationId, QString());
+    cancelReply();
 }
 
 void MainWindow::sendMediaFile()
@@ -1415,12 +1425,47 @@ void MainWindow::setupUi()
     m_sendButton->setObjectName(QStringLiteral("sendButton"));
     m_sendButton->setCursor(Qt::PointingHandCursor);
 
+    m_emojiButton = new QPushButton(QStringLiteral("😀"), composerFrame);
+    m_emojiButton->setObjectName(QStringLiteral("sendFileButton"));
+    m_emojiButton->setCursor(Qt::PointingHandCursor);
+    m_emojiButton->setFixedSize(46, 46);
+    m_emojiButton->setStyleSheet(
+        QStringLiteral("QPushButton { font-size: 20px; border: none; border-radius: 18px; background: #f3f4f6; }"
+                        "QPushButton:hover { background: #e5e7eb; }"));
+
+    m_emojiPicker = new EmojiPicker(this);
+
+    m_replyBar = new QFrame(chatFrame);
+    m_replyBar->setObjectName(QStringLiteral("headerFrame"));
+    m_replyBar->setVisible(false);
+    auto *replyLayout = new QHBoxLayout(m_replyBar);
+    replyLayout->setContentsMargins(8, 6, 8, 6);
+    replyLayout->setSpacing(8);
+
+    auto *replyIcon = new QLabel(QStringLiteral("↩"), m_replyBar);
+    replyIcon->setStyleSheet(QStringLiteral("color: #2563eb; font-size: 14px; font-weight: 700;"));
+    m_replyPreviewLabel = new QLabel(m_replyBar);
+    m_replyPreviewLabel->setStyleSheet(QStringLiteral("color: #374151; font-size: 12px;"));
+    m_replyPreviewLabel->setWordWrap(true);
+    m_replyCancelButton = new QPushButton(QStringLiteral("✕"), m_replyBar);
+    m_replyCancelButton->setFixedSize(24, 24);
+    m_replyCancelButton->setStyleSheet(
+        QStringLiteral("QPushButton { border: none; color: #9ca3af; font-size: 14px; }"
+                        "QPushButton:hover { color: #ef4444; }"));
+    m_replyCancelButton->setCursor(Qt::PointingHandCursor);
+
+    replyLayout->addWidget(replyIcon);
+    replyLayout->addWidget(m_replyPreviewLabel, 1);
+    replyLayout->addWidget(m_replyCancelButton);
+
+    composerLayout->addWidget(m_emojiButton);
     composerLayout->addWidget(m_messageInput, 1);
     composerLayout->addWidget(m_sendFileButton);
     composerLayout->addWidget(m_sendButton);
 
     chatLayout->addWidget(headerFrame);
     chatLayout->addWidget(searchFrame);
+    chatLayout->addWidget(m_replyBar);
     chatLayout->addWidget(m_messageListView, 1);
     chatLayout->addWidget(composerFrame);
 
@@ -1492,6 +1537,21 @@ void MainWindow::setupConnections()
 {
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCurrentMessage);
     connect(m_sendFileButton, &QPushButton::clicked, this, &MainWindow::sendMediaFile);
+    connect(m_emojiButton, &QPushButton::clicked, this, [this]() {
+        if (m_emojiPicker->isVisible()) {
+            m_emojiPicker->hide();
+        } else {
+            const QPoint pos = m_emojiButton->mapToGlobal(QPoint(0, -m_emojiPicker->height()));
+            m_emojiPicker->move(pos);
+            m_emojiPicker->show();
+        }
+    });
+    connect(m_emojiPicker, &EmojiPicker::emojiSelected, this, [this](const QString &emoji) {
+        m_messageInput->insert(emoji);
+        m_messageInput->setFocus();
+        m_emojiPicker->hide();
+    });
+    connect(m_replyCancelButton, &QPushButton::clicked, this, &MainWindow::cancelReply);
     connect(m_messageInput, &QLineEdit::returnPressed, this, &MainWindow::sendCurrentMessage);
     connect(m_messageInput, &QLineEdit::textChanged, this, [this](const QString &text) {
         saveDraftForConversation(currentRoomId(), text);
@@ -1573,6 +1633,7 @@ void MainWindow::setupConnections()
             isFavoriteMessage(conversationId, serverMessageId)
                 ? UiText::MainWindow::kUnfavoriteMessage
                 : UiText::MainWindow::kFavoriteMessage);
+        QAction *replyAction = menu.addAction(QStringLiteral("回复"));
         QAction *copyAction = menu.addAction(UiText::MainWindow::kCopyMessage);
 
         QAction *selectedAction = menu.exec(m_messageListView->viewport()->mapToGlobal(point));
@@ -1590,6 +1651,12 @@ void MainWindow::setupConnections()
         }
         if (selectedAction == toggleFavoriteAction) {
             toggleFavoriteForMessageIndex(index);
+            return;
+        }
+        if (selectedAction == replyAction) {
+            const QString content = index.data(MessageListModel::ContentRole).toString();
+            const QString senderId = index.data(MessageListModel::SenderIdRole).toString();
+            startReply(serverMessageId, content, senderId);
             return;
         }
         if (selectedAction == copyAction) {
@@ -3098,8 +3165,25 @@ void MainWindow::updateMessageSearchUi()
     if (m_messageSearchNextButton) m_messageSearchNextButton->setEnabled(false);
 }
 
+void MainWindow::startReply(qint64 messageId, const QString &content, const QString &sender)
+{
+    m_replyToMessageId = messageId;
+    m_replyToContent = content;
+    m_replyToSender = sender;
 
+    const QString preview = QStringLiteral("回复 %1: %2").arg(sender, content.left(80));
+    m_replyPreviewLabel->setText(preview);
+    m_replyBar->setVisible(true);
+    m_messageInput->setFocus();
+}
 
+void MainWindow::cancelReply()
+{
+    m_replyToMessageId = 0;
+    m_replyToContent.clear();
+    m_replyToSender.clear();
+    m_replyBar->setVisible(false);
+}
 
 
 
