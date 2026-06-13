@@ -15,6 +15,7 @@ public:
     void setMediaThumbnail(qint64 serverMessageId, const QPixmap &thumbnail);
     void clearMediaThumbnails();
     void setSenderAvatarPixmap(const QString &avatarUrl, const QPixmap &pixmap);
+    void setSelfAvatarPixmap(const QPixmap &pixmap);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override;
@@ -26,4 +27,5 @@ private:
     QSet<qint64> m_favoriteServerMessageIds;
     QHash<qint64, QPixmap> m_mediaThumbnailsByServerMessageId;
     QHash<QString, QPixmap> m_senderAvatarPixmapsByUrl;
+    QPixmap m_selfAvatarPixmap;
 };

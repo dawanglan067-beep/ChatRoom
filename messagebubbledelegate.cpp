@@ -251,6 +251,11 @@ void MessageBubbleDelegate::setSenderAvatarPixmap(const QString &avatarUrl, cons
     m_senderAvatarPixmapsByUrl.insert(normalizedUrl, pixmap);
 }
 
+void MessageBubbleDelegate::setSelfAvatarPixmap(const QPixmap &pixmap)
+{
+    m_selfAvatarPixmap = pixmap;
+}
+
 void MessageBubbleDelegate::setMediaThumbnail(qint64 serverMessageId, const QPixmap &thumbnail)
 {
     if (serverMessageId <= 0 || thumbnail.isNull()) {
@@ -441,7 +446,9 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     }
 
     QPixmap avatarPixmap;
-    if (!isSelf) {
+    if (isSelf) {
+        avatarPixmap = m_selfAvatarPixmap;
+    } else {
         avatarPixmap = m_senderAvatarPixmapsByUrl.value(senderAvatarUrl);
         if (avatarPixmap.isNull()) {
             avatarPixmap = m_senderAvatarPixmapsByUrl.value(senderId.trimmed());

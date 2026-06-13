@@ -3251,9 +3251,16 @@ void MainWindow::updateProfileAvatarBadge()
                         const QPixmap scaled = pixmap.scaled(42, 42, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
                         const int side = qMin(scaled.width(), scaled.height());
                         const QRect crop((scaled.width() - side) / 2, (scaled.height() - side) / 2, side, side);
-                        m_profileAvatarLabel->setPixmap(scaled.copy(crop));
+                        const QPixmap cropped = scaled.copy(crop);
+                        m_profileAvatarLabel->setPixmap(cropped);
                         m_profileAvatarLabel->setStyleSheet(
                             QStringLiteral("border-radius: 21px; background: transparent;"));
+                        if (m_messageDelegate) {
+                            m_messageDelegate->setSelfAvatarPixmap(cropped);
+                            if (m_messageListView && m_messageListView->viewport()) {
+                                m_messageListView->viewport()->update();
+                            }
+                        }
                         return;
                     }
                 }
