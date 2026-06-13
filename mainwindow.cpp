@@ -1859,14 +1859,12 @@ void MainWindow::setupConnections()
     connect(m_messageModel, &QAbstractItemModel::rowsInserted, this,
             [this](const QModelIndex &parent, int first, int last) {
                 Q_UNUSED(parent);
-                const int insertedCount = (last - first + 1);
-                if (first == 0 && m_chatStore->currentMessageCount() > insertedCount) {
+                Q_UNUSED(last);
+                if (first == 0 && m_chatStore->currentMessageCount() > 1) {
                     return;
                 }
                 scrollMessagesToBottom();
                 refreshMessageSearchMatches(false);
-                preloadMediaThumbnailsForCurrentConversation();
-                preloadMessageAvatarsForCurrentConversation();
             });
     connect(m_messageModel, &QAbstractItemModel::modelReset, this, [this]() {
         refreshMessageSearchMatches(false);
@@ -1878,8 +1876,6 @@ void MainWindow::setupConnections()
             [this](const QModelIndex &, const QModelIndex &) {
                 refreshMessageSearchMatches(false);
                 m_messageHandler->refreshFavoriteHighlights();
-                preloadMediaThumbnailsForCurrentConversation();
-                preloadMessageAvatarsForCurrentConversation();
             });
     if (m_messageListView && m_messageListView->verticalScrollBar()) {
         connect(m_messageListView->verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int value) {
@@ -1925,19 +1921,22 @@ void MainWindow::setupConnections()
     connect(m_messageHandler, &MessageHandler::messageReceived, this, [this](const QString &conversationId, const Message &message) {
         if (conversationId == currentRoomId()) {
             scrollMessagesToBottom();
-            preloadMediaThumbnailsForCurrentConversation();
-            preloadMessageAvatarsForCurrentConversation();
             if (message.serverMessageId > 0) {
+                bool isImage = false;
+                QString fileName, rawUrl;
+                if (MediaUtils::parseMediaMessageContent(message.content, &isImage, &fileName, &rawUrl) && isImage) {
+                    requestMediaThumbnail(message.serverMessageId, rawUrl);
+                }
+                if (!message.senderAvatarUrl.isEmpty()) {
+                    requestMessageAvatar(message.senderAvatarUrl, message.senderId);
+                }
                 markConversationReadOnServer(conversationId, message.serverMessageId);
             }
         }
         refreshNetworkUi();
     });
     connect(m_messageHandler, &MessageHandler::messageRecalled, this, [this](const QString &conversationId, qint64) {
-        if (conversationId == currentRoomId()) {
-            preloadMediaThumbnailsForCurrentConversation();
-            preloadMessageAvatarsForCurrentConversation();
-        }
+        Q_UNUSED(conversationId);
     });
     connect(m_messageHandler, &MessageHandler::realtimeConnected, this, [this]() {
         m_messageHandler->joinCurrentRoomIfConnected();
