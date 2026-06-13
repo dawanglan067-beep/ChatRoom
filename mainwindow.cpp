@@ -236,13 +236,21 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::sendCurrentMessage()
 {
+    if (!m_messageInput || !m_chatStore || !m_chatClient) {
+        return;
+    }
+
     const QString messageText = m_messageInput->text().trimmed();
     if (messageText.isEmpty()) {
         return;
     }
 
-    const QString clientMessageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const QString conversationId = currentRoomId();
+    if (conversationId.trimmed().isEmpty()) {
+        return;
+    }
+
+    const QString clientMessageId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
     QString displayContent = messageText;
     if (m_replyToMessageId > 0) {

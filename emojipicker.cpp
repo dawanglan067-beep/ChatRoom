@@ -61,8 +61,8 @@ EmojiPicker::EmojiPicker(QWidget *parent)
                 QStringLiteral("QPushButton { border: none; font-size: 18px; background: transparent; border-radius: 6px; }"
                                 "QPushButton:hover { background: #e5e7eb; }"));
             btn->setCursor(Qt::PointingHandCursor);
-            connect(btn, &QPushButton::clicked, this, [this, btn]() {
-                emit emojiSelected(btn->text());
+            connect(btn, &QPushButton::clicked, this, [this, emojiText = QString::fromUtf8(cat.emojis[i])]() {
+                emit emojiSelected(emojiText);
             });
             m_mainLayout->addWidget(btn, row, col);
             col++;
