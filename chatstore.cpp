@@ -247,9 +247,6 @@ bool ChatStore::appendMessageToConversation(const QString &conversationId, const
         }
 
         emit conversationsReset();
-        if (currentConversationId.isEmpty() || messageBelongsToCurrentConversation) {
-            emit currentConversationChanged();
-        }
         return true;
     }
 
