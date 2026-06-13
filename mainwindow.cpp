@@ -804,8 +804,38 @@ void MainWindow::updateTypingStatusLabel()
     if (!m_typingStatusLabel) {
         return;
     }
-    m_typingStatusLabel->clear();
-    m_typingStatusLabel->setVisible(false);
+
+    const QString conversationId = currentRoomId().trimmed();
+    const QHash<QString, QString> typingUsers = m_typingUsersByConversationId.value(conversationId);
+    if (typingUsers.isEmpty()) {
+        m_typingStatusLabel->clear();
+        m_typingStatusLabel->setVisible(false);
+        return;
+    }
+
+    QStringList names;
+    for (auto it = typingUsers.constBegin(); it != typingUsers.constEnd(); ++it) {
+        names.append(it.value().isEmpty() ? it.key() : it.value());
+    }
+    names.removeAll(QString());
+    if (names.isEmpty()) {
+        m_typingStatusLabel->clear();
+        m_typingStatusLabel->setVisible(false);
+        return;
+    }
+
+    names.sort();
+    QString text;
+    if (names.size() == 1) {
+        text = QStringLiteral("%1 正在输入...").arg(names.first());
+    } else if (names.size() == 2) {
+        text = QStringLiteral("%1、%2 正在输入...").arg(names.at(0), names.at(1));
+    } else {
+        text = QStringLiteral("%1 等 %2 人正在输入...").arg(names.first()).arg(names.size());
+    }
+
+    m_typingStatusLabel->setText(text);
+    m_typingStatusLabel->setVisible(true);
 }
 
 void MainWindow::showFavoriteMessagesDialog()
@@ -1659,6 +1689,7 @@ void MainWindow::setupConnections()
         updateTypingStatusLabel();
     });
     connect(m_chatClient, &ChatClient::disconnected, this, [this]() {
+        m_typingUsersByConversationId.clear();
         updateTypingStatusLabel();
         refreshNetworkUi();
     });
@@ -1748,6 +1779,38 @@ void MainWindow::setupConnections()
             }
         }
     });
+    connect(m_messageHandler, &MessageHandler::typingUsersUpdated, this,
+        [this](const QString &conversationId, const QHash<QString, QString> &users) {
+            if (users.isEmpty()) {
+                m_typingUsersByConversationId.remove(conversationId);
+            } else {
+                m_typingUsersByConversationId.insert(conversationId, users);
+            }
+            if (conversationId == currentRoomId()) {
+                updateTypingStatusLabel();
+            }
+        });
+    connect(m_profileManager, &ProfileManager::profileUpdated, this, [this]() {
+        m_loggedInUserNickname = m_profileManager->currentUserNickname();
+        m_loggedInUserAvatarUrl = m_profileManager->currentUserAvatarUrl();
+        updateProfileAvatarBadge();
+        refreshConversationHeader();
+    });
+    connect(m_profileManager, &ProfileManager::typingUsersUpdated, this,
+        [this](const QString &conversationId, const QHash<QString, QString> &users) {
+            if (users.isEmpty()) {
+                m_typingUsersByConversationId.remove(conversationId);
+            } else {
+                m_typingUsersByConversationId.insert(conversationId, users);
+            }
+            if (conversationId == currentRoomId()) {
+                updateTypingStatusLabel();
+            }
+        });
+    connect(m_conversationManager, &ConversationManager::networkStatusChanged,
+            this, &MainWindow::setNetworkStatus);
+    connect(m_networkService, &NetworkService::networkStatusChanged,
+            this, &MainWindow::setNetworkStatus);
 }
 
 void MainWindow::syncInitialSelection()
@@ -1766,6 +1829,7 @@ void MainWindow::syncInitialSelection()
 void MainWindow::loadConversationData()
 {
     if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        m_typingUsersByConversationId.clear();
         updateTypingStatusLabel();
         m_loadingMediaThumbnailIds.clear();
         if (m_messageDelegate) {

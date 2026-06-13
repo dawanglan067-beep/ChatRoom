@@ -160,6 +160,7 @@ private:
     QHash<QString, qint64> m_lastReadAckMessageIds;
     QHash<QString, qint64> m_pendingMessageFocusByConversationId;
     QHash<QString, QJsonObject> m_favoriteMessagesByKey;
+    QHash<QString, QHash<QString, QString>> m_typingUsersByConversationId;
     QTimer *m_typingStopTimer = nullptr;
     QTimer *m_presenceRefreshTimer = nullptr;
     QSet<qint64> m_loadingMediaThumbnailIds;
