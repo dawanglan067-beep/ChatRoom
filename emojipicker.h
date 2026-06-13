@@ -1,22 +1,20 @@
 #pragma once
 
-#include <QWidget>
+#include <QMenu>
+#include <QObject>
 
-class QGridLayout;
-class QScrollArea;
-
-class EmojiPicker : public QWidget
+class EmojiPicker : public QObject
 {
     Q_OBJECT
 
 public:
     explicit EmojiPicker(QWidget *parent = nullptr);
 
+    void showAt(const QPoint &globalPos);
+
 signals:
     void emojiSelected(const QString &emoji);
 
 private:
-    QScrollArea *m_scrollArea = nullptr;
-    QWidget *m_contentWidget = nullptr;
-    QGridLayout *m_mainLayout = nullptr;
+    QMenu *m_menu = nullptr;
 };

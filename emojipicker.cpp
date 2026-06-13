@@ -1,81 +1,63 @@
 #include "emojipicker.h"
 
+#include <QAction>
 #include <QGridLayout>
-#include <QHBoxLayout>
 #include <QLabel>
+#include <QMenu>
 #include <QPushButton>
-#include <QScrollArea>
-#include <QVBoxLayout>
+#include <QWidgetAction>
 
 namespace
 {
-struct EmojiCategory
+struct EmojiGroup
 {
-    const char *label;
-    const char *emojis[30];
+    const char *title;
+    const char *emojis[20];
 };
 
-const EmojiCategory categories[] = {
-    {"表情", {"😀","😂","🤣","😊","😍","🥰","😘","😜","🤔","😤","😭","😱","😴","🙄","😇","🤗","🤩","😏","😶","🫠","😬","🥺","😈","💀","👻","🤡","💩","👽","🤖", nullptr}},
-    {"手势", {"👍","👎","👏","🙌","🤝","✌️","🤞","🫶","💪","👋","🙏","👀","🫰","🤘","🖐️","✋","🤌","👌","🫵","🤙","👈","👉","👆","👇","☝️","✊","👊","🤛","🤜", nullptr}},
-    {"爱心", {"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","♥️","🫀","❤️‍🔥","❤️‍🩹","💋","👄","🫦","🥰","😍","😘", nullptr}},
-    {"动物", {"🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋", nullptr}},
-    {"食物", {"🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍒","🍑","🥭","🍍","🥝","🍅","🥑","🍕","🍔","🍟","🌭","🍿","🧁","🍰","🍩","🍪","🍫","🍬","☕","🍵", nullptr}},
-    {"活动", {"⚽","🏀","🏈","⚾","🎾","🏐","🏉","🎱","🏓","🏸","🥅","⛳","🎯","🏆","🥇","🥈","🥉","🎮","🎲","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🎷","🎸", nullptr}},
-    {"旅行", {"🚗","🚕","🚌","🚎","🏎️","🚑","🚒","✈️","🚀","🛸","🏠","🏢","🏥","🏫","⛪","🕌","🕍","⛩️","🏰","🗽","🗼","🌉","🌋","🗻","🏕️","🏖️","🌅","🌄","🌠", nullptr}},
-    {"符号", {"✅","❌","⭕","❓","❗","💯","🔥","⭐","🌟","💫","✨","⚡","💥","🎉","🎊","🏆","📌","📎","🔗","💰","💎","🔔","🔒","🔓","🔑","⏰","⏳","💡","📱", nullptr}},
+const EmojiGroup groups[] = {
+    {"表情", {"😀","😂","🤣","😊","😍","🥰","😘","😜","🤔","😤","😭","😱","😴","🙄","😇","🤗","🤩","😏","😶","🫠"}},
+    {"手势", {"👍","👎","👏","🙌","🤝","✌️","🤞","💪","👋","🙏","👀","🤙","👈","👉","👆","👇","✊","👊","🤛","🤜"}},
+    {"爱心", {"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","💋"}},
+    {"动物", {"🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅"}},
+    {"食物", {"🍎","🍊","🍋","🍌","🍉","🍇","🍓","🍒","🍑","🥭","🍕","🍔","🍟","🌭","🍿","🍰","🍩","🍪","🍫","☕"}},
+    {"符号", {"✅","❌","⭕","❓","❗","💯","🔥","⭐","🌟","💫","✨","⚡","💥","🎉","🎊","🏆","📌","💎","🔔","💡"}},
 };
 }
 
 EmojiPicker::EmojiPicker(QWidget *parent)
-    : QWidget(parent)
+    : QObject(parent)
 {
-    setVisible(false);
+    m_menu = new QMenu(parent);
+    m_menu->setStyleSheet(
+        QStringLiteral("QMenu { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px; }"
+                        "QMenu::item { padding: 4px 8px; border-radius: 4px; }"
+                        "QMenu::item:selected { background: #f3f4f6; }"));
 
-    auto *mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(4, 4, 4, 4);
-    mainLayout->setSpacing(2);
+    for (const auto &group : groups) {
+        auto *header = new QLabel(QString::fromUtf8(group.title), parent);
+        header->setStyleSheet(QStringLiteral("font-size: 11px; font-weight: 600; color: #9ca3af; padding: 4px 8px;"));
+        auto *headerAction = new QWidgetAction(m_menu);
+        headerAction->setDefaultWidget(header);
+        headerAction->setEnabled(false);
+        m_menu->addAction(headerAction);
 
-    m_scrollArea = new QScrollArea(this);
-    m_scrollArea->setWidgetResizable(true);
-    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_scrollArea->setFrameShape(QFrame::NoFrame);
-
-    m_contentWidget = new QWidget();
-    m_mainLayout = new QGridLayout(m_contentWidget);
-    m_mainLayout->setContentsMargins(4, 4, 4, 4);
-    m_mainLayout->setSpacing(2);
-
-    int row = 0;
-    for (const auto &cat : categories) {
-        auto *header = new QLabel(QString::fromUtf8(cat.label), m_contentWidget);
-        header->setStyleSheet(QStringLiteral("font-size: 12px; font-weight: 600; color: #6b7280; padding: 4px 0;"));
-        m_mainLayout->addWidget(header, row, 0, 1, 10);
-        row++;
-
-        int col = 0;
-        for (int i = 0; cat.emojis[i] != nullptr; ++i) {
-            auto *btn = new QPushButton(QString::fromUtf8(cat.emojis[i]), m_contentWidget);
-            btn->setFixedSize(32, 32);
-            btn->setStyleSheet(
-                QStringLiteral("QPushButton { border: none; font-size: 18px; background: transparent; border-radius: 6px; }"
-                                "QPushButton:hover { background: #e5e7eb; }"));
-            btn->setCursor(Qt::PointingHandCursor);
-            connect(btn, &QPushButton::clicked, this, [this, emojiText = QString::fromUtf8(cat.emojis[i])]() {
-                emit emojiSelected(emojiText);
+        for (int i = 0; group.emojis[i] != nullptr; ++i) {
+            const QString emoji = QString::fromUtf8(group.emojis[i]);
+            auto *action = m_menu->addAction(emoji);
+            action->setIconText(emoji);
+            connect(action, &QAction::triggered, this, [this, emoji]() {
+                emit emojiSelected(emoji);
             });
-            m_mainLayout->addWidget(btn, row, col);
-            col++;
-            if (col >= 10) {
-                col = 0;
-                row++;
-            }
         }
-        if (col > 0) {
-            row++;
-        }
-    }
 
-    m_scrollArea->setWidget(m_contentWidget);
-    mainLayout->addWidget(m_scrollArea);
+        m_menu->addSeparator();
+    }
+}
+
+void EmojiPicker::showAt(const QPoint &globalPos)
+{
+    if (m_menu) {
+        m_menu->popup(globalPos);
+    }
 }

@@ -1564,7 +1564,7 @@ void MainWindow::setupUi()
         QStringLiteral("QPushButton { font-size: 20px; border: none; border-radius: 18px; background: #f3f4f6; }"
                         "QPushButton:hover { background: #e5e7eb; }"));
 
-    m_emojiPicker = new EmojiPicker(chatFrame);
+    m_emojiPicker = new EmojiPicker(this);
 
     m_replyBar = new QFrame(chatFrame);
     m_replyBar->setObjectName(QStringLiteral("headerFrame"));
@@ -1599,12 +1599,6 @@ void MainWindow::setupUi()
     chatLayout->addWidget(m_replyBar);
     chatLayout->addWidget(m_messageListView, 1);
     chatLayout->addWidget(composerFrame);
-
-    m_emojiPicker = new EmojiPicker(chatFrame);
-    m_emojiPicker->setFixedHeight(200);
-    m_emojiPicker->setVisible(false);
-    m_emojiPicker->move(0, 0);
-    m_emojiPicker->resize(0, 0);
 
     rootLayout->addWidget(sidebarFrame);
     rootLayout->addWidget(chatFrame, 1);
@@ -1675,22 +1669,7 @@ void MainWindow::setupConnections()
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCurrentMessage);
     connect(m_sendFileButton, &QPushButton::clicked, this, &MainWindow::sendMediaFile);
     connect(m_emojiButton, &QPushButton::clicked, this, [this]() {
-        if (m_emojiPicker->isVisible()) {
-            m_emojiPicker->hide();
-        } else {
-            QWidget *chatFrame = m_messageListView->parentWidget();
-            if (chatFrame) {
-                const int pickerHeight = 200;
-                m_emojiPicker->setFixedHeight(pickerHeight);
-                m_emojiPicker->setFixedWidth(m_messageListView->width());
-                const QPoint sendBtnGlobal = m_sendButton->mapToGlobal(QPoint(0, 0));
-                const QPoint chatFrameGlobal = chatFrame->mapToGlobal(QPoint(0, 0));
-                m_emojiPicker->move(m_messageListView->x(),
-                                    sendBtnGlobal.y() - chatFrameGlobal.y() - pickerHeight - 4);
-                m_emojiPicker->raise();
-                m_emojiPicker->show();
-            }
-        }
+        m_emojiPicker->showAt(m_emojiButton->mapToGlobal(QPoint(0, -220)));
     });
     connect(m_emojiPicker, &EmojiPicker::emojiSelected, this, [this](const QString &emoji) {
         m_messageInput->insert(emoji);
