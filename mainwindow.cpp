@@ -1906,11 +1906,14 @@ void MainWindow::setupConnections()
     // MessageHandler signal connections for UI reactions
     connect(m_messageHandler, &MessageHandler::networkStatusChanged, this, &MainWindow::setNetworkStatus);
     connect(m_messageHandler, &MessageHandler::scrollMessagesToBottom, this, &MainWindow::scrollMessagesToBottom);
-    connect(m_messageHandler, &MessageHandler::messageReceived, this, [this](const QString &conversationId, const Message &) {
+    connect(m_messageHandler, &MessageHandler::messageReceived, this, [this](const QString &conversationId, const Message &message) {
         if (conversationId == currentRoomId()) {
             scrollMessagesToBottom();
             preloadMediaThumbnailsForCurrentConversation();
             preloadMessageAvatarsForCurrentConversation();
+            if (message.serverMessageId > 0) {
+                markConversationReadOnServer(conversationId, message.serverMessageId);
+            }
         }
         refreshNetworkUi();
     });
