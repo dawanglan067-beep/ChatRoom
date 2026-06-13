@@ -2207,12 +2207,141 @@ void MainWindow::showProfileDialog()
 
 void MainWindow::showFriendsDialog()
 {
-    // TODO: 从备份恢复实现
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    auto *dialog = new QDialog(this);
+    dialog->setWindowTitle(QStringLiteral("好友列表"));
+    dialog->resize(500, 420);
+
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(10);
+
+    auto *listWidget = new QListWidget(dialog);
+    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(listWidget, 1);
+
+    auto *addLayout = new QHBoxLayout();
+    auto *emailInput = new QLineEdit(dialog);
+    emailInput->setPlaceholderText(QStringLiteral("输入对方邮箱添加好友"));
+    auto *addButton = new QPushButton(QStringLiteral("添加"), dialog);
+    addLayout->addWidget(emailInput, 1);
+    addLayout->addWidget(addButton);
+    layout->addLayout(addLayout);
+
+    auto *buttonBox = new QDialogButtonBox(dialog);
+    buttonBox->addButton(QDialogButtonBox::Close);
+    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    connect(m_profileManager, &ProfileManager::friendsLoaded, dialog, [listWidget](const QJsonObject &result) {
+        listWidget->clear();
+        const QJsonArray friends = result.value(QStringLiteral("friends")).toArray();
+        for (const QJsonValue &value : friends) {
+            const QJsonObject f = value.toObject();
+            const QString nickname = f.value(QStringLiteral("nickname")).toString().trimmed();
+            const QString email = f.value(QStringLiteral("email")).toString().trimmed();
+            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
+            auto *item = new QListWidgetItem(display, listWidget);
+            item->setData(Qt::UserRole, email);
+        }
+    });
+
+    connect(addButton, &QPushButton::clicked, dialog, [this, emailInput]() {
+        const QString email = emailInput->text().trimmed().toLower();
+        if (email.isEmpty()) return;
+        m_profileManager->sendFriendRequest(m_backendBaseUrl, email);
+        emailInput->clear();
+    });
+
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+
+    m_profileManager->loadFriends(m_backendBaseUrl);
+    dialog->exec();
 }
 
 void MainWindow::showFriendRequestsDialog()
 {
-    // TODO: 从备份恢复实现
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    auto *dialog = new QDialog(this);
+    dialog->setWindowTitle(QStringLiteral("好友请求"));
+    dialog->resize(500, 420);
+
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(10);
+
+    auto *listWidget = new QListWidget(dialog);
+    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(listWidget, 1);
+
+    auto *buttonBox = new QDialogButtonBox(dialog);
+    auto *acceptButton = buttonBox->addButton(QStringLiteral("接受"), QDialogButtonBox::AcceptRole);
+    auto *rejectButton = buttonBox->addButton(QStringLiteral("拒绝"), QDialogButtonBox::DestructiveRole);
+    buttonBox->addButton(QDialogButtonBox::Close);
+    acceptButton->setEnabled(false);
+    rejectButton->setEnabled(false);
+    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    connect(listWidget, &QListWidget::itemSelectionChanged, dialog, [listWidget, acceptButton, rejectButton]() {
+        const bool hasSelection = listWidget->currentItem() != nullptr;
+        acceptButton->setEnabled(hasSelection);
+        rejectButton->setEnabled(hasSelection);
+    });
+
+    auto refreshList = [this, listWidget, dialog]() {
+        Q_UNUSED(dialog);
+        listWidget->clear();
+        m_profileManager->loadFriendRequests(m_backendBaseUrl);
+    };
+
+    connect(m_profileManager, &ProfileManager::friendRequestsLoaded, dialog, [listWidget](const QJsonObject &result) {
+        listWidget->clear();
+        const QJsonArray requests = result.value(QStringLiteral("requests")).toArray();
+        for (const QJsonValue &value : requests) {
+            const QJsonObject r = value.toObject();
+            const qint64 requestId = r.value(QStringLiteral("id")).toInteger(0);
+            const QString nickname = r.value(QStringLiteral("senderNickname")).toString().trimmed();
+            const QString email = r.value(QStringLiteral("senderEmail")).toString().trimmed();
+            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
+            auto *item = new QListWidgetItem(display, listWidget);
+            item->setData(Qt::UserRole, requestId);
+        }
+        if (listWidget->count() == 0) {
+            listWidget->addItem(QStringLiteral("暂无好友请求"));
+        }
+    });
+
+    connect(acceptButton, &QPushButton::clicked, dialog, [this, listWidget]() {
+        QListWidgetItem *item = listWidget->currentItem();
+        if (!item) return;
+        const qint64 requestId = item->data(Qt::UserRole).toLongLong();
+        if (requestId <= 0) return;
+        m_profileManager->acceptFriendRequest(m_backendBaseUrl, requestId);
+        delete listWidget->takeItem(listWidget->row(item));
+    });
+
+    connect(rejectButton, &QPushButton::clicked, dialog, [this, listWidget]() {
+        QListWidgetItem *item = listWidget->currentItem();
+        if (!item) return;
+        const qint64 requestId = item->data(Qt::UserRole).toLongLong();
+        if (requestId <= 0) return;
+        m_profileManager->rejectFriendRequest(m_backendBaseUrl, requestId);
+        delete listWidget->takeItem(listWidget->row(item));
+    });
+
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+
+    refreshList();
+    dialog->exec();
 }
 
 void MainWindow::logout()
@@ -2249,32 +2378,276 @@ void MainWindow::logout()
 
 void MainWindow::showBlacklistDialog()
 {
-    // TODO: 从备份恢复实现
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    auto *dialog = new QDialog(this);
+    dialog->setWindowTitle(QStringLiteral("黑名单"));
+    dialog->resize(460, 380);
+
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(10);
+
+    auto *listWidget = new QListWidget(dialog);
+    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(listWidget, 1);
+
+    auto *addLayout = new QHBoxLayout();
+    auto *emailInput = new QLineEdit(dialog);
+    emailInput->setPlaceholderText(QStringLiteral("输入邮箱拉黑用户"));
+    auto *blockButton = new QPushButton(QStringLiteral("拉黑"), dialog);
+    addLayout->addWidget(emailInput, 1);
+    addLayout->addWidget(blockButton);
+    layout->addLayout(addLayout);
+
+    auto *buttonBox = new QDialogButtonBox(dialog);
+    auto *unblockButton = buttonBox->addButton(QStringLiteral("解除拉黑"), QDialogButtonBox::ActionRole);
+    buttonBox->addButton(QDialogButtonBox::Close);
+    unblockButton->setEnabled(false);
+    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    connect(listWidget, &QListWidget::itemSelectionChanged, dialog, [listWidget, unblockButton]() {
+        unblockButton->setEnabled(listWidget->currentItem() != nullptr);
+    });
+
+    connect(m_profileManager, &ProfileManager::blacklistLoaded, dialog, [listWidget](const QJsonObject &result) {
+        listWidget->clear();
+        const QJsonArray blocked = result.value(QStringLiteral("blockedUsers")).toArray();
+        for (const QJsonValue &value : blocked) {
+            const QJsonObject u = value.toObject();
+            const qint64 userId = u.value(QStringLiteral("id")).toInteger(0);
+            const QString nickname = u.value(QStringLiteral("nickname")).toString().trimmed();
+            const QString email = u.value(QStringLiteral("email")).toString().trimmed();
+            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
+            auto *item = new QListWidgetItem(display, listWidget);
+            item->setData(Qt::UserRole, userId);
+        }
+        if (listWidget->count() == 0) {
+            listWidget->addItem(QStringLiteral("黑名单为空"));
+        }
+    });
+
+    connect(blockButton, &QPushButton::clicked, dialog, [this, emailInput]() {
+        const QString email = emailInput->text().trimmed().toLower();
+        if (email.isEmpty()) return;
+        m_profileManager->blockUser(m_backendBaseUrl, email);
+        emailInput->clear();
+        m_profileManager->loadBlacklist(m_backendBaseUrl);
+    });
+
+    connect(unblockButton, &QPushButton::clicked, dialog, [this, listWidget]() {
+        QListWidgetItem *item = listWidget->currentItem();
+        if (!item) return;
+        const qint64 userId = item->data(Qt::UserRole).toLongLong();
+        if (userId <= 0) return;
+        m_profileManager->unblockUser(m_backendBaseUrl, userId);
+        delete listWidget->takeItem(listWidget->row(item));
+    });
+
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+
+    m_profileManager->loadBlacklist(m_backendBaseUrl);
+    dialog->exec();
 }
 
 void MainWindow::inviteMembersToCurrentConversation()
 {
-    // TODO: 从备份恢复实现
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation || conversation->type != QStringLiteral("group")) {
+        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        return;
+    }
+
+    bool accepted = false;
+    const QString emailText = QInputDialog::getText(
+        this,
+        QStringLiteral("邀请成员"),
+        QStringLiteral("输入要邀请的邮箱（多个用逗号分隔）"),
+        QLineEdit::Normal,
+        QString(),
+        &accepted).trimmed();
+
+    if (!accepted || emailText.isEmpty()) {
+        return;
+    }
+
+    const QStringList emails = emailText.split(QStringLiteral(","), Qt::SkipEmptyParts);
+    QJsonArray memberEmails;
+    for (const QString &email : emails) {
+        const QString trimmed = email.trimmed().toLower();
+        if (!trimmed.isEmpty()) {
+            memberEmails.append(trimmed);
+        }
+    }
+
+    if (memberEmails.isEmpty()) {
+        return;
+    }
+
+    m_conversationManager->inviteMembers(m_backendBaseUrl, conversation->id, memberEmails);
 }
 
 void MainWindow::removeMemberFromCurrentConversation()
 {
-    // TODO: 从备份恢复实现
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation || conversation->type != QStringLiteral("group")) {
+        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        return;
+    }
+
+    if (m_currentConversationMembers.isEmpty()) {
+        setNetworkStatus(QStringLiteral("暂无成员信息"));
+        return;
+    }
+
+    QStringList emails;
+    QList<QString> emailList;
+    for (const GroupMemberInfo &member : std::as_const(m_currentConversationMembers)) {
+        if (member.isSelf) continue;
+        const QString display = member.nickname.trimmed().isEmpty()
+            ? member.email
+            : QStringLiteral("%1 (%2)").arg(member.nickname, member.email);
+        emails.append(display);
+        emailList.append(member.email);
+    }
+
+    if (emails.isEmpty()) {
+        setNetworkStatus(QStringLiteral("没有可移除的成员"));
+        return;
+    }
+
+    bool ok = false;
+    const QString selected = QInputDialog::getItem(
+        this,
+        QStringLiteral("移除成员"),
+        QStringLiteral("选择要移除的成员"),
+        emails,
+        0,
+        false,
+        &ok);
+
+    if (!ok || selected.isEmpty()) {
+        return;
+    }
+
+    const int index = emails.indexOf(selected);
+    if (index < 0 || index >= emailList.size()) {
+        return;
+    }
+
+    const QString memberEmail = emailList.at(index);
+    auto *msgBox = new QMessageBox(this);
+    msgBox->setWindowTitle(QStringLiteral("确认移除"));
+    msgBox->setText(QStringLiteral("确定要将 %1 移出群聊吗？").arg(memberEmail));
+    msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox->setDefaultButton(QMessageBox::No);
+    if (msgBox->exec() == QMessageBox::Yes) {
+        removeMemberByEmail(memberEmail, nullptr);
+        loadConversationMembers(m_chatStore->currentConversationIndex());
+    }
 }
 
 void MainWindow::showMembersDialog()
 {
-    // TODO: 从备份恢复实现
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation || conversation->type != QStringLiteral("group")) {
+        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("群成员 - %1").arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
+    dialog.resize(420, 380);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(10);
+
+    auto *listWidget = new QListWidget(&dialog);
+    listWidget->setSelectionMode(QAbstractItemView::NoSelection);
+
+    for (const GroupMemberInfo &member : std::as_const(m_currentConversationMembers)) {
+        const QString displayName = member.nickname.trimmed().isEmpty()
+            ? member.email : member.nickname;
+        QString suffix;
+        if (member.isOwner) suffix += QStringLiteral(" [群主]");
+        if (member.isSelf) suffix += QStringLiteral(" (我)");
+        const QString statusText = member.isOnline ? QStringLiteral(" 在线") : QStringLiteral(" 离线");
+        auto *item = new QListWidgetItem(displayName + suffix + statusText, listWidget);
+        item->setForeground(member.isOnline ? QColor("#059669") : QColor("#9ca3af"));
+    }
+
+    if (listWidget->count() == 0) {
+        listWidget->addItem(QStringLiteral("暂无成员信息"));
+    }
+
+    layout->addWidget(listWidget, 1);
+
+    auto *buttonBox = new QDialogButtonBox(&dialog);
+    buttonBox->addButton(QDialogButtonBox::Close);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttonBox);
+
+    dialog.exec();
 }
 
 void MainWindow::leaveCurrentConversation()
 {
-    // TODO: 从备份恢复实现
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation) {
+        return;
+    }
+
+    if (conversation->type != QStringLiteral("group")) {
+        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        return;
+    }
+
+    const auto decision = QMessageBox::question(
+        this,
+        QStringLiteral("退出群聊"),
+        QStringLiteral("确定要退出「%1」吗？").arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
+
+    if (decision != QMessageBox::Yes) {
+        return;
+    }
+
+    m_conversationManager->leaveConversation(m_backendBaseUrl, conversation->id);
 }
 
 void MainWindow::deleteCurrentConversation()
 {
-    // TODO: 从备份恢复实现
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation) {
+        return;
+    }
+
+    const QString name = conversation->name.isEmpty() ? conversation->id : conversation->name;
+    const auto decision = QMessageBox::question(
+        this,
+        QStringLiteral("删除会话"),
+        QStringLiteral("确定要删除「%1」吗？").arg(name));
+
+    if (decision != QMessageBox::Yes) {
+        return;
+    }
+
+    m_conversationManager->deleteCurrentConversation();
+    loadConversationData();
 }
 
 void MainWindow::togglePinCurrentConversation()
