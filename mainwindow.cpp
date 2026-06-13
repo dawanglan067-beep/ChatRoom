@@ -258,7 +258,9 @@ void MainWindow::sendCurrentMessage()
             .arg(m_replyToSender, m_replyToContent.left(60), messageText);
     }
 
+    QSignalBlocker blocker(m_messageInput);
     m_messageInput->clear();
+    blocker.unblock();
     sendTypingState(false);
 
     if (!m_chatStore->addPendingMessageToCurrentChat(displayContent, clientMessageId)) {
