@@ -350,7 +350,102 @@ void MainWindow::createDirectConversation()
 
 void MainWindow::createGroupConversation()
 {
-    // TODO: 实现群组创建功能
+    if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
+        setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(QStringLiteral("创建群聊"));
+    dialog.resize(460, 420);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(12);
+
+    auto *nameLabel = new QLabel(QStringLiteral("群名称"), &dialog);
+    nameLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
+    auto *nameInput = new QLineEdit(&dialog);
+    nameInput->setPlaceholderText(QStringLiteral("输入群聊名称"));
+    nameInput->setMinimumHeight(40);
+    layout->addWidget(nameLabel);
+    layout->addWidget(nameInput);
+
+    auto *memberLabel = new QLabel(QStringLiteral("邀请成员"), &dialog);
+    memberLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
+    layout->addWidget(memberLabel);
+
+    auto *addLayout = new QHBoxLayout();
+    auto *emailInput = new QLineEdit(&dialog);
+    emailInput->setPlaceholderText(QStringLiteral("输入邮箱，回车添加"));
+    emailInput->setMinimumHeight(40);
+    auto *addButton = new QPushButton(QStringLiteral("添加"), &dialog);
+    addButton->setMinimumHeight(40);
+    addLayout->addWidget(emailInput, 1);
+    addLayout->addWidget(addButton);
+    layout->addLayout(addLayout);
+
+    auto *memberList = new QListWidget(&dialog);
+    memberList->setMinimumHeight(120);
+    layout->addWidget(memberList, 1);
+
+    auto *buttonBox = new QDialogButtonBox(&dialog);
+    auto *createButton = buttonBox->addButton(QStringLiteral("创建群聊"), QDialogButtonBox::AcceptRole);
+    buttonBox->addButton(QDialogButtonBox::Cancel);
+    createButton->setEnabled(false);
+    layout->addWidget(buttonBox);
+
+    auto updateCreateButton = [nameInput, memberList, createButton]() {
+        createButton->setEnabled(!nameInput->text().trimmed().isEmpty() && memberList->count() > 0);
+    };
+
+    connect(nameInput, &QLineEdit::textChanged, &dialog, updateCreateButton);
+
+    auto addMember = [emailInput, memberList, updateCreateButton]() {
+        const QString email = emailInput->text().trimmed().toLower();
+        if (email.isEmpty()) return;
+
+        for (int i = 0; i < memberList->count(); ++i) {
+            if (memberList->item(i)->data(Qt::UserRole).toString() == email) {
+                emailInput->clear();
+                return;
+            }
+        }
+
+        auto *item = new QListWidgetItem(email, memberList);
+        item->setData(Qt::UserRole, email);
+        emailInput->clear();
+        updateCreateButton();
+    };
+
+    connect(addButton, &QPushButton::clicked, &dialog, addMember);
+    connect(emailInput, &QLineEdit::returnPressed, &dialog, addMember);
+
+    connect(memberList, &QListWidget::itemDoubleClicked, &dialog, [memberList, updateCreateButton](QListWidgetItem *item) {
+        delete memberList->takeItem(memberList->row(item));
+        updateCreateButton();
+    });
+
+    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, [&dialog]() {
+        dialog.accept();
+    });
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const QString groupName = nameInput->text().trimmed();
+    QJsonArray memberEmails;
+    for (int i = 0; i < memberList->count(); ++i) {
+        memberEmails.append(memberList->item(i)->data(Qt::UserRole).toString());
+    }
+
+    if (groupName.isEmpty() || memberEmails.isEmpty()) {
+        return;
+    }
+
+    m_conversationManager->createGroupConversation(m_backendBaseUrl, groupName, memberEmails);
 }
 
 void MainWindow::focusMessageByServerIdInConversation(const QString &conversationId, qint64 serverMessageId)
