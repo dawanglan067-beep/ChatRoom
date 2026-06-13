@@ -1661,7 +1661,7 @@ void MainWindow::setupConnections()
         if (m_emojiPicker->isVisible()) {
             m_emojiPicker->hide();
         } else {
-            const QPoint pos = m_emojiButton->mapToGlobal(QPoint(0, -m_emojiPicker->height()));
+            const QPoint pos = m_emojiButton->mapToGlobal(QPoint(0, m_emojiButton->height()));
             m_emojiPicker->move(pos);
             m_emojiPicker->show();
         }

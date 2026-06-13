@@ -1,5 +1,6 @@
 #include "emojipicker.h"
 
+#include <QEvent>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -28,9 +29,10 @@ const EmojiCategory categories[] = {
 }
 
 EmojiPicker::EmojiPicker(QWidget *parent)
-    : QWidget(parent, Qt::Popup | Qt::FramelessWindowHint)
+    : QWidget(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
 {
     setFixedSize(360, 320);
+    setAttribute(Qt::WA_ShowWithoutActivating, true);
 
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(4, 4, 4, 4);
@@ -78,4 +80,15 @@ EmojiPicker::EmojiPicker(QWidget *parent)
 
     m_scrollArea->setWidget(m_contentWidget);
     mainLayout->addWidget(m_scrollArea);
+}
+
+void EmojiPicker::focusOutEvent(QFocusEvent *event)
+{
+    Q_UNUSED(event);
+    hide();
+}
+
+void EmojiPicker::hideEvent(QHideEvent *event)
+{
+    Q_UNUSED(event);
 }
