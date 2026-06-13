@@ -747,16 +747,11 @@ void MainWindow::scheduleTypingStateUpdate()
 
     const bool shouldBeTyping = !m_messageInput->text().trimmed().isEmpty();
     if (shouldBeTyping) {
-        if (!m_isTypingActive || m_typingConversationId != conversationId) {
-            sendTypingState(true);
-        }
+        sendTypingState(true);
         if (m_typingStopTimer) {
             m_typingStopTimer->start(kTypingStopDelayMs);
         }
-        return;
-    }
-
-    if (m_isTypingActive && m_typingConversationId == conversationId) {
+    } else {
         sendTypingState(false);
     }
 }
@@ -781,41 +776,8 @@ void MainWindow::updateTypingStatusLabel()
     if (!m_typingStatusLabel) {
         return;
     }
-
-    const QString conversationId = currentRoomId().trimmed();
-    const QHash<QString, QString> typingUsers = m_typingUsersByConversationId.value(conversationId);
-    if (typingUsers.isEmpty()) {
-        m_typingStatusLabel->clear();
-        m_typingStatusLabel->setVisible(false);
-        return;
-    }
-
-    QStringList names;
-    for (auto it = typingUsers.constBegin(); it != typingUsers.constEnd(); ++it) {
-        names.append(it.value().isEmpty() ? it.key() : it.value());
-    }
-    names.removeAll(QString());
-    if (names.isEmpty()) {
-        m_typingStatusLabel->clear();
-        m_typingStatusLabel->setVisible(false);
-        return;
-    }
-
-    names.sort();
-    QString text;
-    if (names.size() == 1) {
-        text = QStringLiteral("%1 正在输入...").arg(names.first());
-    } else if (names.size() == 2) {
-        text = QStringLiteral("%1、%2 正在输入...")
-                   .arg(names.at(0), names.at(1));
-    } else {
-        text = QStringLiteral("%1 等 %2 人正在输入...")
-                   .arg(names.first())
-                   .arg(names.size());
-    }
-
-    m_typingStatusLabel->setText(text);
-    m_typingStatusLabel->setVisible(true);
+    m_typingStatusLabel->clear();
+    m_typingStatusLabel->setVisible(false);
 }
 
 void MainWindow::showFavoriteMessagesDialog()
@@ -1588,11 +1550,11 @@ void MainWindow::setupConnections()
         QMenu menu(this);
         QAction *deleteAction = menu.addAction(UiText::MainWindow::kDeleteConversation);
         QAction *pinAction = menu.addAction(
-            m_pinnedConversationIds.contains(conversation->id)
+            m_conversationManager->isConversationPinned(conversation->id)
                 ? UiText::MainWindow::kUnpinConversation
                 : UiText::MainWindow::kPinConversation);
         QAction *muteAction = menu.addAction(
-            m_mutedConversationIds.contains(conversation->id)
+            m_conversationManager->isConversationMuted(conversation->id)
                 ? UiText::MainWindow::kUnmuteConversation
                 : UiText::MainWindow::kMuteConversation);
 
@@ -1669,7 +1631,6 @@ void MainWindow::setupConnections()
         updateTypingStatusLabel();
     });
     connect(m_chatClient, &ChatClient::disconnected, this, [this]() {
-        m_typingUsersByConversationId.clear();
         updateTypingStatusLabel();
         refreshNetworkUi();
     });
@@ -1777,7 +1738,6 @@ void MainWindow::syncInitialSelection()
 void MainWindow::loadConversationData()
 {
     if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
-        m_typingUsersByConversationId.clear();
         updateTypingStatusLabel();
         m_loadingMediaThumbnailIds.clear();
         if (m_messageDelegate) {

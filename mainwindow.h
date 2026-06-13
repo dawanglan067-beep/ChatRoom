@@ -75,8 +75,6 @@ private slots:
     void scrollMessagesToBottom();
 
 private:
-    using JsonResultCallback = NetworkService::HttpCallback;
-
     struct GroupMemberInfo
     {
         QString email;
@@ -162,19 +160,13 @@ private:
     QHash<QString, qint64> m_lastReadAckMessageIds;
     QHash<QString, qint64> m_pendingMessageFocusByConversationId;
     QHash<QString, QJsonObject> m_favoriteMessagesByKey;
-    QHash<QString, QHash<QString, QString>> m_typingUsersByConversationId;
     QTimer *m_typingStopTimer = nullptr;
     QTimer *m_presenceRefreshTimer = nullptr;
-    QSet<QString> m_pinnedConversationIds;
-    QSet<QString> m_mutedConversationIds;
     QSet<qint64> m_loadingMediaThumbnailIds;
     QSet<QString> m_loadingAvatarUrls;
     QSet<QString> m_loadedAvatarUrls;
     QHash<QString, QPixmap> m_avatarPixmapsByUrl;
-    QString m_typingConversationId;
-    bool m_isTypingActive = false;
     bool m_suppressTypingSignals = false;
-    int m_conversationLoadSerial = 0;
     int m_messageLoadSerial = 0;
     int m_membersLoadSerial = 0;
 

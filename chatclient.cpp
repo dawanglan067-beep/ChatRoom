@@ -1,4 +1,4 @@
-﻿#include "chatclient.h"
+#include "chatclient.h"
 #include "uitexts.h"
 
 #include <QDebug>
@@ -114,7 +114,6 @@ ChatClient::ChatClient(QObject *parent)
     setStatusText(UiText::ChatClient::kWebSocketsUnavailable);
 #endif
 
-    emit availabilityChanged(m_available);
 }
 
 bool ChatClient::isAvailable() const

@@ -5,7 +5,6 @@
 #include <QString>
 
 class Message;
-class QPixmap;
 
 namespace ChatUtils
 {
@@ -20,8 +19,6 @@ inline qint64 parseBackendTimestamp(const QString &value)
     return withoutMs.isValid() ? withoutMs.toMSecsSinceEpoch() : QDateTime::currentMSecsSinceEpoch();
 }
 
-QString profileInitial(const QString &nickname, const QString &email);
-QPixmap circularAvatarPixmap(const QPixmap &source, int edge);
 QString formatMessageTimeOrFallback(qint64 timestampMs, const QString &fallbackText);
 
 Message messageFromBackendPayload(const QJsonObject &object, const QString &loggedInEmail);

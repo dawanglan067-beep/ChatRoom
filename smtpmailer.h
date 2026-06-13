@@ -11,5 +11,4 @@ struct MailSendResult
 class SmtpMailer
 {
 public:
-    static MailSendResult sendVerificationEmail(const QString &recipientEmail, const QString &code);
 };

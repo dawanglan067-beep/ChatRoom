@@ -28,7 +28,6 @@ public:
     void setTypingState(const QString &conversationId, bool isTyping);
 
 signals:
-    void availabilityChanged(bool available);
     void connectionStateChanged(const QString &statusText);
     void rawMessageReceived(const QString &messageText);
     void jsonMessageReceived(const QJsonObject &payload);

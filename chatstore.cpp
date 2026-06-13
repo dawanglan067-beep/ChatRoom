@@ -6,11 +6,6 @@
 
 namespace
 {
-qint64 minutesAgo(int minutes)
-{
-    return QDateTime::currentMSecsSinceEpoch() - (minutes * 60LL * 1000LL);
-}
-
 void updateConversationPreviewFromLastMessage(Conversation *conversation)
 {
     if (!conversation || conversation->messages.isEmpty()) {
@@ -121,54 +116,6 @@ void ChatStore::clear()
     m_conversations.clear();
     m_conversationIndexCache.clear();
     m_currentConversationIndex = -1;
-    m_queuedMessageCount = 0;
-
-    emit conversationsReset();
-    emit currentConversationChanged();
-}
-
-void ChatStore::loadMockData()
-{
-    m_conversations = {
-        Conversation(QStringLiteral("c-001"),
-                     QStringLiteral("产品小组"),
-                     {
-                         Message(QStringLiteral("今天先把聊天项目的骨架搭起来。"),
-                                 minutesAgo(65),
-                                 QStringLiteral("pm"),
-                                 false),
-                         Message(QStringLiteral("我先把界面层和数据层拆开。"),
-                                 minutesAgo(61),
-                                 QStringLiteral("me"),
-                                 true),
-                         Message(QStringLiteral("记得把发送后的自动滚动也做好。"),
-                                 minutesAgo(55),
-                                 QStringLiteral("pm"),
-                                 false),
-                     }),
-        Conversation(QStringLiteral("c-002"),
-                     QStringLiteral("前端联调"),
-                     {
-                         Message(QStringLiteral("左边放会话列表，右边放聊天区域。"),
-                                 minutesAgo(35),
-                                 QStringLiteral("design"),
-                                 false),
-                         Message(QStringLiteral("收到，我先做一个稳定的 Widgets 版本。"),
-                                 minutesAgo(31),
-                                 QStringLiteral("me"),
-                                 true),
-                     }),
-        Conversation(QStringLiteral("c-003"),
-                     QStringLiteral("本地记录"),
-                     {
-                         Message(QStringLiteral("第一阶段先不接真实网络，只做本地假发送。"),
-                                 minutesAgo(12),
-                                 QStringLiteral("system"),
-                                 false),
-                     }),
-    };
-
-    m_currentConversationIndex = m_conversations.isEmpty() ? -1 : 0;
     m_queuedMessageCount = 0;
 
     emit conversationsReset();
@@ -605,75 +552,6 @@ bool ChatStore::markMessageRecalled(const QString &conversationId, qint64 server
     return false;
 }
 
-bool ChatStore::updateConversationPreviewSnapshot(const QString &conversationId,
-                                                  const QString &previewText,
-                                                  qint64 previewTimestamp)
-{
-    if (conversationId.trimmed().isEmpty()) {
-        return false;
-    }
-
-    for (int index = 0; index < m_conversations.size(); ++index) {
-        Conversation &conversation = m_conversations[index];
-        if (conversation.id != conversationId) {
-            continue;
-        }
-        if (!conversation.messages.isEmpty()) {
-            return false;
-        }
-
-        const QString normalizedPreview = previewText.trimmed();
-        const qint64 normalizedTimestamp = previewTimestamp > 0
-            ? previewTimestamp
-            : conversation.lastMessageTimestamp;
-
-        if (conversation.lastMessagePreview == normalizedPreview
-            && conversation.lastMessageTimestamp == normalizedTimestamp) {
-            return false;
-        }
-
-        conversation.lastMessagePreview = normalizedPreview;
-        conversation.lastMessageTimestamp = normalizedTimestamp;
-        emit conversationUpdated(index);
-        if (index == m_currentConversationIndex) {
-            emit currentConversationChanged();
-        }
-        return true;
-    }
-
-    return false;
-}
-
-bool ChatStore::retryFailedMessage(int row, const QString &newClientMessageId, QString *contentOut)
-{
-    if (row < 0 || newClientMessageId.trimmed().isEmpty() || m_currentConversationIndex < 0
-        || m_currentConversationIndex >= m_conversations.size()) {
-        return false;
-    }
-
-    Conversation &conversation = m_conversations[m_currentConversationIndex];
-    if (row >= conversation.messages.size()) {
-        return false;
-    }
-
-    Message &message = conversation.messages[row];
-    if (!message.isSelf || message.status != Message::DeliveryStatus::Failed) {
-        return false;
-    }
-
-    if (contentOut) {
-        *contentOut = message.content;
-    }
-
-    message.status = Message::DeliveryStatus::Sending;
-    message.clientMessageId = newClientMessageId;
-    message.timestamp = QDateTime::currentMSecsSinceEpoch();
-    updateConversationPreviewFromLastMessage(&conversation);
-    emit messageUpdated(row);
-    emit conversationUpdated(m_currentConversationIndex);
-    return true;
-}
-
 bool ChatStore::markConversationRead(int index)
 {
     if (index < 0 || index >= m_conversations.size()) {
@@ -708,25 +586,6 @@ void ChatStore::setCurrentConversation(int index)
     m_currentConversationIndex = index;
     markConversationRead(index);
     emit currentConversationChanged();
-}
-
-bool ChatStore::addMessageToCurrentChat(const QString &content)
-{
-    const QString trimmedContent = content.trimmed();
-    if (trimmedContent.isEmpty() || m_currentConversationIndex < 0
-        || m_currentConversationIndex >= m_conversations.size()) {
-        return false;
-    }
-
-    Conversation &conversation = m_conversations[m_currentConversationIndex];
-    const int newMessageIndex = conversation.messages.size();
-    conversation.messages.append(
-        Message(trimmedContent, QDateTime::currentMSecsSinceEpoch(), QStringLiteral("me"), true));
-    updateConversationPreviewFromLastMessage(&conversation);
-
-    emit messageAppended(newMessageIndex);
-    emit conversationUpdated(m_currentConversationIndex);
-    return true;
 }
 
 bool ChatStore::addReceivedMessageToCurrentChat(const QString &content, const QString &senderId)

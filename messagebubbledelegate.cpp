@@ -1,4 +1,4 @@
-﻿#include "messagebubbledelegate.h"
+#include "messagebubbledelegate.h"
 
 #include "messagelistmodel.h"
 #include "uitexts.h"
@@ -233,20 +233,9 @@ MessageBubbleDelegate::MessageBubbleDelegate(QObject *parent)
 {
 }
 
-void MessageBubbleDelegate::setSearchHighlight(const QList<int> &matchedRows, int currentRow)
-{
-    m_searchMatchedRows = QSet<int>(matchedRows.begin(), matchedRows.end());
-    m_searchCurrentRow = currentRow;
-}
-
 void MessageBubbleDelegate::setFavoriteServerMessageIds(const QSet<qint64> &favoriteMessageIds)
 {
     m_favoriteServerMessageIds = favoriteMessageIds;
-}
-
-void MessageBubbleDelegate::setSelfAvatarPixmap(const QPixmap &pixmap)
-{
-    m_selfAvatarPixmap = pixmap;
 }
 
 void MessageBubbleDelegate::setSenderAvatarPixmap(const QString &avatarUrl, const QPixmap &pixmap)
@@ -291,8 +280,6 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     const qint64 serverMessageId = index.data(MessageListModel::ServerMessageIdRole).toLongLong();
     const bool systemMessage = isSystemMessage(senderId, content);
     const bool showSenderName = !isSelf;
-    const bool isSearchMatched = m_searchMatchedRows.contains(index.row());
-    const bool isCurrentSearchMatch = isSearchMatched && index.row() == m_searchCurrentRow;
     const bool isFavorite = serverMessageId > 0 && m_favoriteServerMessageIds.contains(serverMessageId);
 
     const QRect itemRect =
@@ -327,14 +314,6 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
                                               -kSystemHorizontalPadding, -kSystemVerticalPadding),
                           Qt::TextWordWrap | Qt::AlignCenter,
                           systemText);
-        if (isSearchMatched) {
-            painter->setBrush(Qt::NoBrush);
-            painter->setPen(QPen(isCurrentSearchMatch ? QColor(QStringLiteral("#F59E0B"))
-                                                      : QColor(QStringLiteral("#FDE68A")),
-                                 isCurrentSearchMatch ? 2.2 : 1.6));
-            painter->drawRoundedRect(systemRect.adjusted(-2, -2, 2, 2), 13, 13);
-        }
-
         painter->restore();
         return;
     }
@@ -442,13 +421,6 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     tailPath.addPolygon(tail);
     bubblePath = bubblePath.united(tailPath);
     painter->drawPath(bubblePath);
-    if (isSearchMatched) {
-        painter->setBrush(Qt::NoBrush);
-        painter->setPen(QPen(isCurrentSearchMatch ? QColor(QStringLiteral("#F59E0B"))
-                                                  : QColor(QStringLiteral("#FDE68A")),
-                             isCurrentSearchMatch ? 2.2 : 1.6));
-        painter->drawPath(bubblePath);
-    }
 
     if (showSenderName) {
         QFont senderFont = option.font;
@@ -469,9 +441,7 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
     }
 
     QPixmap avatarPixmap;
-    if (isSelf) {
-        avatarPixmap = m_selfAvatarPixmap;
-    } else {
+    if (!isSelf) {
         avatarPixmap = m_senderAvatarPixmapsByUrl.value(senderAvatarUrl);
         if (avatarPixmap.isNull()) {
             avatarPixmap = m_senderAvatarPixmapsByUrl.value(senderId.trimmed());

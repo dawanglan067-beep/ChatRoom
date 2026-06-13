@@ -22,7 +22,6 @@ public:
     int findConversationIndex(const QString &conversationId) const;
 
     void clear();
-    void loadMockData();
     void replaceConversations(QList<Conversation> conversations);
     bool replaceMessagesForConversation(int index, QList<Message> messages);
     bool prependMessagesForConversation(int index, QList<Message> olderMessages);
@@ -35,15 +34,11 @@ public:
     bool removeQueuedMessage(const QString &conversationId, const QString &clientMessageId);
     bool markMessagesReadByPeer(const QString &conversationId, qint64 lastReadServerMessageId);
     bool markMessageRecalled(const QString &conversationId, qint64 serverMessageId, const Message &recalledMessage);
-    bool updateConversationPreviewSnapshot(const QString &conversationId, const QString &previewText,
-                                           qint64 previewTimestamp);
     bool markPendingMessageSent(const QString &conversationId, const QString &clientMessageId,
                                 const Message &serverMessage);
-    bool retryFailedMessage(int row, const QString &newClientMessageId, QString *contentOut);
     bool markConversationRead(int index);
     bool markConversationReadById(const QString &conversationId);
     void setCurrentConversation(int index);
-    bool addMessageToCurrentChat(const QString &content);
     bool addReceivedMessageToCurrentChat(const QString &content, const QString &senderId);
 
 signals:

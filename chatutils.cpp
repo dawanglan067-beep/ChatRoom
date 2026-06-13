@@ -3,39 +3,8 @@
 #include "timeformatutils.h"
 #include "uitexts.h"
 
-#include <QPainter>
-#include <QPainterPath>
-#include <QPixmap>
-
 namespace ChatUtils
 {
-
-QString profileInitial(const QString &nickname, const QString &email)
-{
-    const QString source = nickname.trimmed().isEmpty() ? email.trimmed() : nickname.trimmed();
-    return source.isEmpty() ? QStringLiteral("?") : source.left(1).toUpper();
-}
-
-QPixmap circularAvatarPixmap(const QPixmap &source, int edge)
-{
-    if (source.isNull() || edge <= 0) {
-        return QPixmap();
-    }
-
-    QPixmap scaled = source.scaled(edge, edge, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const QRect crop((scaled.width() - edge) / 2, (scaled.height() - edge) / 2, edge, edge);
-    scaled = scaled.copy(crop);
-
-    QPixmap rounded(edge, edge);
-    rounded.fill(Qt::transparent);
-    QPainter painter(&rounded);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    QPainterPath path;
-    path.addEllipse(0, 0, edge, edge);
-    painter.setClipPath(path);
-    painter.drawPixmap(0, 0, scaled);
-    return rounded;
-}
 
 QString formatMessageTimeOrFallback(qint64 timestampMs, const QString &fallbackText)
 {
