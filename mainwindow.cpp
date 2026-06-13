@@ -1830,6 +1830,7 @@ void MainWindow::setupConnections()
         if (m_databaseManager && m_databaseManager->isOpen()) {
             m_databaseManager->saveConversations(m_chatStore->conversations());
         }
+        QTimer::singleShot(50, this, &MainWindow::scrollMessagesToBottom);
     });
     connect(m_chatStore, &ChatStore::messageAppended, this, [this](int index) {
         if (m_databaseManager && m_databaseManager->isOpen()) {
