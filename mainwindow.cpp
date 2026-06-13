@@ -1296,9 +1296,6 @@ void MainWindow::scrollMessagesToBottom()
     QTimer::singleShot(0, this, [this]() {
         if (m_messageListView) {
             m_messageListView->scrollToBottom();
-            if (m_messageListView->viewport()) {
-                m_messageListView->viewport()->update();
-            }
         }
     });
 }
@@ -1869,9 +1866,6 @@ void MainWindow::setupConnections()
                 }
                 scrollMessagesToBottom();
                 refreshMessageSearchMatches(false);
-                if (m_messageListView && m_messageListView->viewport()) {
-                    m_messageListView->viewport()->update();
-                }
             });
     connect(m_messageModel, &QAbstractItemModel::modelReset, this, [this]() {
         refreshMessageSearchMatches(false);
