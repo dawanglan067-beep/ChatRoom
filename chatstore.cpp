@@ -2,6 +2,7 @@
 #include "uitexts.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QSet>
 
 namespace
@@ -258,6 +259,10 @@ bool ChatStore::addPendingMessageToCurrentChat(const QString &content, const QSt
     const QString trimmedContent = content.trimmed();
     if (trimmedContent.isEmpty() || clientMessageId.trimmed().isEmpty() || m_currentConversationIndex < 0
         || m_currentConversationIndex >= m_conversations.size()) {
+        qDebug() << "addPendingMessageToCurrentChat: FAILED - trimmedContent=" << trimmedContent
+                 << "clientMessageId=" << clientMessageId
+                 << "currentIndex=" << m_currentConversationIndex
+                 << "conversationsSize=" << m_conversations.size();
         return false;
     }
 

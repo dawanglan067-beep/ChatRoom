@@ -263,9 +263,13 @@ void MainWindow::sendCurrentMessage()
     blocker.unblock();
     sendTypingState(false);
 
+    qDebug() << "sendCurrentMessage: adding pending message, conversationId=" << conversationId
+             << "clientMessageId=" << clientMessageId << "content=" << displayContent;
     if (!m_chatStore->addPendingMessageToCurrentChat(displayContent, clientMessageId)) {
+        qDebug() << "sendCurrentMessage: addPendingMessageToCurrentChat FAILED";
         return;
     }
+    qDebug() << "sendCurrentMessage: addPendingMessageToCurrentChat OK";
     m_pendingMessageConversationIds.insert(clientMessageId, conversationId);
 
     if (!m_chatClient->isConnected()) {
