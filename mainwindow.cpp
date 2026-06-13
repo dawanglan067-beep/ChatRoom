@@ -258,6 +258,9 @@ void MainWindow::sendCurrentMessage()
             .arg(m_replyToSender, m_replyToContent.left(60), messageText);
     }
 
+    m_messageInput->clear();
+    sendTypingState(false);
+
     if (!m_chatStore->addPendingMessageToCurrentChat(displayContent, clientMessageId)) {
         return;
     }
@@ -269,8 +272,6 @@ void MainWindow::sendCurrentMessage()
                          UiText::MainWindow::kStatusMessageQueuedDetail);
         m_chatClient->connectToServer(QUrl::fromUserInput(m_serverUrlInput->text().trimmed()), m_authToken);
         m_chatClient->sendChatMessage(messageText, conversationId, clientMessageId);
-        m_messageInput->clear();
-        sendTypingState(false);
         saveDraftForConversation(conversationId, QString());
         cancelReply();
         return;
@@ -278,12 +279,8 @@ void MainWindow::sendCurrentMessage()
 
     m_messageHandler->restartPendingMessageTimeout(conversationId, clientMessageId);
     m_chatClient->sendChatMessage(messageText, conversationId, clientMessageId);
-    m_messageInput->clear();
-    sendTypingState(false);
-    QTimer::singleShot(0, this, [this, conversationId]() {
-        saveDraftForConversation(conversationId, QString());
-        cancelReply();
-    });
+    saveDraftForConversation(conversationId, QString());
+    cancelReply();
 }
 
 void MainWindow::sendMediaFile()
