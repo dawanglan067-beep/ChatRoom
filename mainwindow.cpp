@@ -3127,106 +3127,113 @@ void MainWindow::runGlobalMessageSearch()
         return;
     }
 
-    auto conn = std::make_shared<QMetaObject::Connection>();
-    *conn = connect(m_messageHandler, &MessageHandler::searchResultsReady, this,
-        [this, conn, keyword](const QJsonObject &results) {
-            disconnect(*conn);
+    QUrl url = QUrl::fromUserInput(m_backendBaseUrl);
+    url.setPath(QStringLiteral("/api/search/messages"));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("q"), keyword);
+    url.setQuery(query);
 
-            const QJsonArray items = results.value(QStringLiteral("results")).toArray();
-            if (items.isEmpty()) {
-                QMessageBox::information(this, UiText::MainWindow::kGlobalSearchTitle,
-                                         UiText::MainWindow::kGlobalSearchNotFound.arg(keyword));
+    m_networkService->getJsonAsync(url, [this, keyword](const NetworkService::HttpResult &result) {
+        if (!result.ok) {
+            setNetworkStatus(UiText::MainWindow::kStatusGlobalSearchFailed, result.message);
+            return;
+        }
+
+        const QJsonArray items = result.body.value(QStringLiteral("results")).toArray();
+        if (items.isEmpty()) {
+            QMessageBox::information(this, UiText::MainWindow::kGlobalSearchTitle,
+                                     UiText::MainWindow::kGlobalSearchNotFound.arg(keyword));
+            return;
+        }
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(UiText::MainWindow::kGlobalSearchResultTitle);
+        dialog.resize(680, 460);
+
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(14, 14, 14, 14);
+        layout->setSpacing(10);
+
+        auto *summaryLabel = new QLabel(
+            QStringLiteral("\u5173\u952E\u8BCD\u201C%1\u201D\u547D\u4E2D %2 \u6761").arg(keyword).arg(items.size()),
+            &dialog);
+        layout->addWidget(summaryLabel);
+
+        auto *resultList = new QListWidget(&dialog);
+        resultList->setSelectionMode(QAbstractItemView::SingleSelection);
+        resultList->setWordWrap(true);
+
+        for (const QJsonValue &value : items) {
+            const QJsonObject itemObject = value.toObject();
+            const QJsonObject messageObject = itemObject.value(QStringLiteral("message")).toObject();
+            const QString conversationId = itemObject.value(QStringLiteral("conversationId")).toString();
+            const QString conversationName = itemObject.value(QStringLiteral("conversationName")).toString();
+            const qint64 messageId = messageObject.value(QStringLiteral("id")).toInteger(0);
+            const QString senderNickname = messageObject.value(QStringLiteral("senderNickname")).toString();
+            const QString content = messageObject.value(QStringLiteral("content")).toString();
+            const QString createdAt = messageObject.value(QStringLiteral("createdAt")).toString();
+
+            QString preview = QStringLiteral("[%1] %2: %3")
+                                  .arg(conversationName.isEmpty() ? conversationId : conversationName,
+                                       senderNickname,
+                                       content);
+            if (!createdAt.trimmed().isEmpty()) {
+                preview += QStringLiteral("\n") + createdAt;
+            }
+
+            auto *listItem = new QListWidgetItem(preview, resultList);
+            listItem->setData(Qt::UserRole, conversationId);
+            listItem->setData(Qt::UserRole + 1, messageId);
+        }
+
+        layout->addWidget(resultList, 1);
+
+        auto *buttonBox = new QDialogButtonBox(&dialog);
+        QPushButton *locateButton = buttonBox->addButton(QStringLiteral("定位消息"), QDialogButtonBox::ActionRole);
+        buttonBox->addButton(QDialogButtonBox::Close);
+        locateButton->setEnabled(false);
+
+        connect(resultList, &QListWidget::itemSelectionChanged, &dialog, [resultList, locateButton]() {
+            locateButton->setEnabled(resultList->currentItem() != nullptr);
+        });
+
+        const auto locateSelected = [this, resultList, &dialog]() {
+            QListWidgetItem *selectedItem = resultList->currentItem();
+            if (!selectedItem) {
                 return;
             }
 
-            QDialog dialog(this);
-            dialog.setWindowTitle(UiText::MainWindow::kGlobalSearchResultTitle);
-            dialog.resize(680, 460);
-
-            auto *layout = new QVBoxLayout(&dialog);
-            layout->setContentsMargins(14, 14, 14, 14);
-            layout->setSpacing(10);
-
-            auto *summaryLabel = new QLabel(
-                QStringLiteral("\u5173\u952E\u8BCD\u201C%1\u201D\u547D\u4E2D %2 \u6761").arg(keyword).arg(items.size()),
-                &dialog);
-            layout->addWidget(summaryLabel);
-
-            auto *resultList = new QListWidget(&dialog);
-            resultList->setSelectionMode(QAbstractItemView::SingleSelection);
-            resultList->setWordWrap(true);
-
-            for (const QJsonValue &value : items) {
-                const QJsonObject itemObject = value.toObject();
-                const QJsonObject messageObject = itemObject.value(QStringLiteral("message")).toObject();
-                const QString conversationId = itemObject.value(QStringLiteral("conversationId")).toString();
-                const QString conversationName = itemObject.value(QStringLiteral("conversationName")).toString();
-                const qint64 messageId = messageObject.value(QStringLiteral("id")).toInteger(0);
-                const QString senderNickname = messageObject.value(QStringLiteral("senderNickname")).toString();
-                const QString content = messageObject.value(QStringLiteral("content")).toString();
-                const QString createdAt = messageObject.value(QStringLiteral("createdAt")).toString();
-
-                QString preview = QStringLiteral("[%1] %2: %3")
-                                      .arg(conversationName.isEmpty() ? conversationId : conversationName,
-                                           senderNickname,
-                                           content);
-                if (!createdAt.trimmed().isEmpty()) {
-                    preview += QStringLiteral("\n") + createdAt;
-                }
-
-                auto *listItem = new QListWidgetItem(preview, resultList);
-                listItem->setData(Qt::UserRole, conversationId);
-                listItem->setData(Qt::UserRole + 1, messageId);
+            const QString conversationId = selectedItem->data(Qt::UserRole).toString().trimmed();
+            const qint64 messageId = selectedItem->data(Qt::UserRole + 1).toLongLong();
+            if (conversationId.isEmpty() || messageId <= 0) {
+                return;
             }
 
-            layout->addWidget(resultList, 1);
+            if (!selectConversationById(conversationId)) {
+                loadConversationData();
+                setNetworkStatus(UiText::MainWindow::kStatusLocateMessageFailed, UiText::MainWindow::kDetailTargetConversationMissing);
+                return;
+            }
 
-            auto *buttonBox = new QDialogButtonBox(&dialog);
-            QPushButton *locateButton = buttonBox->addButton(QStringLiteral("定位消息"), QDialogButtonBox::ActionRole);
-            buttonBox->addButton(QDialogButtonBox::Close);
-            locateButton->setEnabled(false);
+            const int conversationIndex = m_chatStore->currentConversationIndex();
+            if (conversationIndex < 0) {
+                return;
+            }
 
-            connect(resultList, &QListWidget::itemSelectionChanged, &dialog, [resultList, locateButton]() {
-                locateButton->setEnabled(resultList->currentItem() != nullptr);
-            });
+            m_pendingMessageFocusByConversationId.insert(conversationId, messageId);
+            loadMessagesForConversation(conversationIndex, messageId + 1, false);
+            dialog.accept();
+        };
 
-            const auto locateSelected = [this, resultList, &dialog]() {
-                QListWidgetItem *selectedItem = resultList->currentItem();
-                if (!selectedItem) {
-                    return;
-                }
-
-                const QString conversationId = selectedItem->data(Qt::UserRole).toString().trimmed();
-                const qint64 messageId = selectedItem->data(Qt::UserRole + 1).toLongLong();
-                if (conversationId.isEmpty() || messageId <= 0) {
-                    return;
-                }
-
-                if (!selectConversationById(conversationId)) {
-                    loadConversationData();
-                    setNetworkStatus(UiText::MainWindow::kStatusLocateMessageFailed, UiText::MainWindow::kDetailTargetConversationMissing);
-                    return;
-                }
-
-                const int conversationIndex = m_chatStore->currentConversationIndex();
-                if (conversationIndex < 0) {
-                    return;
-                }
-
-                m_pendingMessageFocusByConversationId.insert(conversationId, messageId);
-                loadMessagesForConversation(conversationIndex, messageId + 1, false);
-                dialog.accept();
-            };
-
-            connect(locateButton, &QPushButton::clicked, &dialog, locateSelected);
-            connect(resultList, &QListWidget::itemDoubleClicked, &dialog, [locateSelected](QListWidgetItem *) {
-                locateSelected();
-            });
-            connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-            layout->addWidget(buttonBox);
-            dialog.exec();
+        connect(locateButton, &QPushButton::clicked, &dialog, locateSelected);
+        connect(resultList, &QListWidget::itemDoubleClicked, &dialog, [locateSelected](QListWidgetItem *) {
+            locateSelected();
         });
+        connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        layout->addWidget(buttonBox);
+        dialog.exec();
+    });
 }
 
 void MainWindow::updateProfileAvatarBadge()

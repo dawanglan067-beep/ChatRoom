@@ -42,7 +42,6 @@ public:
     void persistFavoritesToSettings() const;
     bool isFavoriteMessage(const QString &conversationId, qint64 messageId) const;
 
-    void searchMessages(const QString &backendBaseUrl, const QString &keyword);
     void editMessage(const QString &conversationId, qint64 messageId, const QString &newContent);
     void focusMessageByServerIdInConversation(const QString &conversationId, qint64 serverMessageId);
     void refreshFavoriteHighlights();
@@ -67,7 +66,6 @@ signals:
     void messageFailed(const QString &conversationId, const QString &clientMessageId);
     void networkStatusChanged(const QString &status, const QString &detail = QString());
     void scrollMessagesToBottom();
-    void searchResultsReady(const QJsonObject &results);
     void favoriteHighlightsRefreshed();
     void typingUsersUpdated(const QString &conversationId, const QHash<QString, QString> &users);
     void presenceUpdated(const QString &conversationId, const QString &userEmail, bool isOnline, qint64 lastSeenAt);

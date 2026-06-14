@@ -433,38 +433,15 @@ bool MessageHandler::isFavoriteMessage(const QString &conversationId, qint64 mes
     return m_favoriteMessagesByKey.contains(key);
 }
 
-void MessageHandler::searchMessages(const QString &backendBaseUrl, const QString &keyword)
-{
-    if (backendBaseUrl.isEmpty() || keyword.isEmpty()) {
-        return;
-    }
-
-    QUrl url = QUrl::fromUserInput(backendBaseUrl);
-    url.setPath(QStringLiteral("/api/search/messages"));
-
-    m_networkService->getJsonAsync(url, [this, keyword](const NetworkService::HttpResult &result) {
-        if (!result.ok) {
-            emit networkStatusChanged(UiText::MainWindow::kStatusGlobalSearchFailed, result.message);
-            return;
-        }
-
-        const QJsonArray items = result.body.value(QStringLiteral("results")).toArray();
-        if (items.isEmpty()) {
-            emit networkStatusChanged(QStringLiteral("search_empty"), keyword);
-            return;
-        }
-
-        emit searchResultsReady(result.body);
-    });
-}
-
 void MessageHandler::editMessage(const QString &conversationId, qint64 messageId, const QString &newContent)
 {
     if (conversationId.isEmpty() || messageId <= 0 || newContent.isEmpty()) {
         return;
     }
 
-    Q_UNIMPLEMENTED();
+    Q_UNUSED(conversationId);
+    Q_UNUSED(messageId);
+    Q_UNUSED(newContent);
     emit networkStatusChanged(UiText::MessageHandler::kEditNotSupported);
 }
 

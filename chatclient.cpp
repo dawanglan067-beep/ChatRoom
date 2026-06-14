@@ -1,7 +1,6 @@
 #include "chatclient.h"
 #include "uitexts.h"
 
-#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -84,7 +83,6 @@ ChatClient::ChatClient(QObject *parent)
     });
 
     connect(socket, &QWebSocket::textMessageReceived, this, [this](const QString &messageText) {
-        qDebug() << "WebSocket received:" << messageText;
         emit rawMessageReceived(messageText);
 
         QJsonParseError parseError;
@@ -242,7 +240,6 @@ void ChatClient::setTypingState(const QString &conversationId, bool isTyping)
     payload.insert(QStringLiteral("conversationId"), conversationId);
     payload.insert(QStringLiteral("isTyping"), isTyping);
     const QString messageText = compactJson(payload);
-    qDebug() << "WebSocket sent:" << messageText;
     socket->sendTextMessage(messageText);
 #else
     Q_UNUSED(conversationId);
@@ -288,7 +285,6 @@ void ChatClient::sendJson(const QJsonObject &payload)
     }
 
     const QString messageText = compactJson(payload);
-    qDebug() << "WebSocket sent:" << messageText;
     socket->sendTextMessage(messageText);
 #else
     Q_UNUSED(payload);
@@ -338,7 +334,6 @@ void ChatClient::flushQueuedMessages()
     while (!m_outboundQueue.isEmpty()) {
         const QJsonObject payload = m_outboundQueue.dequeue();
         const QString messageText = compactJson(payload);
-        qDebug() << "WebSocket sent (flushed):" << messageText;
         socket->sendTextMessage(messageText);
     }
     persistOutboundQueue();
