@@ -131,13 +131,16 @@ void DatabaseManager::saveConversations(const QList<Conversation> &conversations
         return;
     }
 
-    db.transaction();
+    if (!db.transaction()) {
+        return;
+    }
     QSqlQuery query(db);
     query.prepare(QStringLiteral(
         "INSERT OR REPLACE INTO conversations "
         "(id, name, type, owner_email, last_message_preview, last_message_timestamp, member_count, online_count, unread_count) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
+    bool ok = true;
     for (const Conversation &conv : conversations) {
         query.addBindValue(conv.id);
         query.addBindValue(conv.name);
@@ -148,10 +151,17 @@ void DatabaseManager::saveConversations(const QList<Conversation> &conversations
         query.addBindValue(conv.memberCount);
         query.addBindValue(conv.onlineCount);
         query.addBindValue(conv.unreadCount);
-        query.exec();
+        if (!query.exec()) {
+            ok = false;
+            break;
+        }
     }
 
-    db.commit();
+    if (ok) {
+        db.commit();
+    } else {
+        db.rollback();
+    }
 }
 
 QList<Conversation> DatabaseManager::loadConversations() const
@@ -189,13 +199,16 @@ void DatabaseManager::saveMessages(const QString &conversationId, const QList<Me
         return;
     }
 
-    db.transaction();
+    if (!db.transaction()) {
+        return;
+    }
     QSqlQuery query(db);
     query.prepare(QStringLiteral(
         "INSERT OR REPLACE INTO messages "
         "(conversation_id, server_message_id, client_message_id, content, sender_id, is_self, timestamp, status, sender_avatar_url) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
+    bool ok = true;
     for (const Message &msg : messages) {
         query.addBindValue(conversationId);
         query.addBindValue(msg.serverMessageId);
@@ -206,10 +219,17 @@ void DatabaseManager::saveMessages(const QString &conversationId, const QList<Me
         query.addBindValue(msg.timestamp);
         query.addBindValue(static_cast<int>(msg.status));
         query.addBindValue(msg.senderAvatarUrl);
-        query.exec();
+        if (!query.exec()) {
+            ok = false;
+            break;
+        }
     }
 
-    db.commit();
+    if (ok) {
+        db.commit();
+    } else {
+        db.rollback();
+    }
 }
 
 QList<Message> DatabaseManager::loadMessages(const QString &conversationId, int limit) const

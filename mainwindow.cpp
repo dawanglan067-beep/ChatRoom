@@ -274,14 +274,14 @@ void MainWindow::sendCurrentMessage()
         setNetworkStatus(UiText::MainWindow::kStatusConnectRealtimeFirst,
                          UiText::MainWindow::kStatusMessageQueuedDetail);
         m_chatClient->connectToServer(QUrl::fromUserInput(m_serverUrlInput->text().trimmed()), m_authToken);
-        m_chatClient->sendChatMessage(messageText, conversationId, clientMessageId);
+        m_chatClient->sendChatMessage(displayContent, conversationId, clientMessageId);
         saveDraftForConversation(conversationId, QString());
         cancelReply();
         return;
     }
 
     m_messageHandler->restartPendingMessageTimeout(conversationId, clientMessageId);
-    m_chatClient->sendChatMessage(messageText, conversationId, clientMessageId);
+    m_chatClient->sendChatMessage(displayContent, conversationId, clientMessageId);
     saveDraftForConversation(conversationId, QString());
     cancelReply();
 }
@@ -3288,13 +3288,62 @@ void MainWindow::updateProfileAvatarBadge()
 
 void MainWindow::refreshMessageSearchMatches(bool scrollToCurrent)
 {
-    Q_UNUSED(scrollToCurrent);
+    m_messageSearchMatches.clear();
+    m_messageSearchCurrentIndex = -1;
+
+    if (!m_messageSearchInput || !m_chatStore) {
+        updateMessageSearchUi();
+        return;
+    }
+
+    const QString keyword = m_messageSearchInput->text().trimmed().toLower();
+    if (keyword.isEmpty()) {
+        updateMessageSearchUi();
+        return;
+    }
+
+    const Conversation *conversation = m_chatStore->currentConversation();
+    if (!conversation) {
+        updateMessageSearchUi();
+        return;
+    }
+
+    for (int i = 0; i < conversation->messages.size(); ++i) {
+        if (conversation->messages.at(i).content.toLower().contains(keyword)) {
+            m_messageSearchMatches.append(i);
+        }
+    }
+
+    if (!m_messageSearchMatches.isEmpty()) {
+        m_messageSearchCurrentIndex = scrollToCurrent ? 0 : -1;
+        if (scrollToCurrent) {
+            jumpMessageSearchMatch(0);
+        }
+    }
+
     updateMessageSearchUi();
 }
 
 void MainWindow::jumpMessageSearchMatch(int step)
 {
-    Q_UNUSED(step);
+    if (m_messageSearchMatches.isEmpty() || !m_messageListView || !m_messageModel) {
+        return;
+    }
+
+    m_messageSearchCurrentIndex += step;
+    if (m_messageSearchCurrentIndex < 0) {
+        m_messageSearchCurrentIndex = m_messageSearchMatches.size() - 1;
+    } else if (m_messageSearchCurrentIndex >= m_messageSearchMatches.size()) {
+        m_messageSearchCurrentIndex = 0;
+    }
+
+    const int row = m_messageSearchMatches.at(m_messageSearchCurrentIndex);
+    const QModelIndex idx = m_messageModel->index(row, 0);
+    if (idx.isValid()) {
+        m_messageListView->scrollTo(idx, QListView::PositionAtCenter);
+    }
+
+    updateMessageSearchUi();
 }
 
 void MainWindow::updateMessageSearchUi()
@@ -3303,9 +3352,13 @@ void MainWindow::updateMessageSearchUi()
         return;
     }
 
-    m_messageSearchResultLabel->setText(QStringLiteral("0/0"));
-    if (m_messageSearchPrevButton) m_messageSearchPrevButton->setEnabled(false);
-    if (m_messageSearchNextButton) m_messageSearchNextButton->setEnabled(false);
+    const bool hasMatches = !m_messageSearchMatches.isEmpty();
+    const QString text = hasMatches
+        ? QStringLiteral("%1/%2").arg(m_messageSearchCurrentIndex + 1).arg(m_messageSearchMatches.size())
+        : QStringLiteral("0/0");
+    m_messageSearchResultLabel->setText(text);
+    if (m_messageSearchPrevButton) m_messageSearchPrevButton->setEnabled(hasMatches);
+    if (m_messageSearchNextButton) m_messageSearchNextButton->setEnabled(hasMatches);
 }
 
 void MainWindow::startReply(qint64 messageId, const QString &content, const QString &sender)

@@ -582,7 +582,10 @@ bool ChatStore::markConversationReadById(const QString &conversationId)
 
 void ChatStore::setCurrentConversation(int index)
 {
-    if (index < 0 || index >= m_conversations.size() || index == m_currentConversationIndex) {
+    if (index < 0 || index >= m_conversations.size()) {
+        return;
+    }
+    if (index == m_currentConversationIndex && m_conversations[index].id == m_conversations.value(m_currentConversationIndex).id) {
         return;
     }
 

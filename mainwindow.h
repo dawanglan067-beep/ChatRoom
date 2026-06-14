@@ -174,6 +174,8 @@ private:
     bool m_suppressTypingSignals = false;
     int m_messageLoadSerial = 0;
     int m_membersLoadSerial = 0;
+    QList<int> m_messageSearchMatches;
+    int m_messageSearchCurrentIndex = -1;
 
     QListView *m_conversationListView = nullptr;
     QListView *m_messageListView = nullptr;
