@@ -380,6 +380,11 @@ bool ChatStore::markMessageSending(const QString &conversationId, const QString 
                 continue;
             }
 
+            if (message.status == Message::DeliveryStatus::Delivered
+                || message.status == Message::DeliveryStatus::Read) {
+                return true;
+            }
+
             if (message.status == Message::DeliveryStatus::Queued) {
                 m_queuedMessageCount = qMax(0, m_queuedMessageCount - 1);
             }
