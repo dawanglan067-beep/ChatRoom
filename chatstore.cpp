@@ -237,6 +237,7 @@ bool ChatStore::appendMessageToConversation(const QString &conversationId, const
         }
 
         Conversation updatedConversation = m_conversations.takeAt(index);
+        const int msgIndex = updatedConversation.messages.size() - 1;
         m_conversations.prepend(std::move(updatedConversation));
         rebuildIndexCache();
 
@@ -247,6 +248,9 @@ bool ChatStore::appendMessageToConversation(const QString &conversationId, const
         }
 
         emit conversationsReset();
+        if (m_currentConversationIndex == 0 && msgIndex >= 0) {
+            emit messageAppended(msgIndex);
+        }
         return true;
     }
 

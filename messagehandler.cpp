@@ -288,11 +288,6 @@ void MessageHandler::handleJsonMessageReceived(const QJsonObject &payload)
         return;
     }
 
-    if (type == QStringLiteral("conversation_read")) {
-        processConversationRead(payload, QString());
-        return;
-    }
-
     if (type == QStringLiteral("profile_updated")) {
         const QJsonObject user = payload.value(QStringLiteral("user")).toObject();
         const QString email = user.value(QStringLiteral("email")).toString().trimmed();
@@ -301,11 +296,6 @@ void MessageHandler::handleJsonMessageReceived(const QJsonObject &payload)
         if (!email.isEmpty() && !nickname.isEmpty()) {
             emit profileUpdatedFromServer(email, nickname, avatarUrl);
         }
-        return;
-    }
-
-    if (type == QStringLiteral("typing_state")) {
-        processTypingState(payload, QString());
         return;
     }
 

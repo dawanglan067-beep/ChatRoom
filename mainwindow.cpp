@@ -1847,13 +1847,13 @@ void MainWindow::setupConnections()
     connect(m_chatStore, &ChatStore::messageUpdated, this, [this](int index) {
         if (m_databaseManager && m_databaseManager->isOpen()) {
             const Conversation *conv = m_chatStore->currentConversation();
+            if (!conv) return;
             const Message *msg = m_chatStore->messageAt(index);
-            if (conv && msg) {
-                if (msg->serverMessageId > 0) {
-                    m_databaseManager->updateMessage(conv->id, msg->serverMessageId, *msg);
-                } else if (!msg->clientMessageId.isEmpty()) {
-                    m_databaseManager->appendMessage(conv->id, *msg);
-                }
+            if (!msg) return;
+            if (msg->serverMessageId > 0) {
+                m_databaseManager->updateMessage(conv->id, msg->serverMessageId, *msg);
+            } else if (!msg->clientMessageId.isEmpty()) {
+                m_databaseManager->appendMessage(conv->id, *msg);
             }
         }
     });
@@ -2578,7 +2578,7 @@ void MainWindow::showFriendsDialog()
         emailInput->clear();
     });
 
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
 
     m_profileManager->loadFriends(m_backendBaseUrl);
     dialog->exec();
@@ -2659,7 +2659,7 @@ void MainWindow::showFriendRequestsDialog()
         delete listWidget->takeItem(listWidget->row(item));
     });
 
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
 
     refreshList();
     dialog->exec();
@@ -2769,7 +2769,7 @@ void MainWindow::showBlacklistDialog()
         delete listWidget->takeItem(listWidget->row(item));
     });
 
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, this, &MainWindow::setNetworkStatus);
+    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
 
     m_profileManager->loadBlacklist(m_backendBaseUrl);
     dialog->exec();
