@@ -178,7 +178,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_presenceRefreshTimer = new QTimer(this);
     m_presenceRefreshTimer->setSingleShot(true);
     connect(m_presenceRefreshTimer, &QTimer::timeout, this, [this]() {
-        loadConversationData();
+        refreshConversationHeader();
     });
 
     updateProfileAvatarBadge();
