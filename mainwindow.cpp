@@ -270,6 +270,7 @@ void MainWindow::sendCurrentMessage()
 
     if (!m_chatClient->isConnected()) {
         m_chatStore->markMessageQueued(conversationId, clientMessageId);
+        m_messageHandler->restartPendingMessageTimeout(conversationId, clientMessageId);
         setNetworkStatus(UiText::MainWindow::kStatusConnectRealtimeFirst,
                          UiText::MainWindow::kStatusMessageQueuedDetail);
         m_chatClient->connectToServer(QUrl::fromUserInput(m_serverUrlInput->text().trimmed()), m_authToken);
@@ -1847,8 +1848,12 @@ void MainWindow::setupConnections()
         if (m_databaseManager && m_databaseManager->isOpen()) {
             const Conversation *conv = m_chatStore->currentConversation();
             const Message *msg = m_chatStore->messageAt(index);
-            if (conv && msg && msg->serverMessageId > 0) {
-                m_databaseManager->updateMessage(conv->id, msg->serverMessageId, *msg);
+            if (conv && msg) {
+                if (msg->serverMessageId > 0) {
+                    m_databaseManager->updateMessage(conv->id, msg->serverMessageId, *msg);
+                } else if (!msg->clientMessageId.isEmpty()) {
+                    m_databaseManager->appendMessage(conv->id, *msg);
+                }
             }
         }
     });
