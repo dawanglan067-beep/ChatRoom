@@ -502,7 +502,7 @@ void MessageHandler::restartPendingMessageTimeout(const QString &conversationId,
         clearPendingMessageTimeout(clientMessageId);
         m_pendingMessageConversationIds.remove(clientMessageId);
     });
-    timeoutTimer->start(10000);
+    timeoutTimer->start(30000);
 
     m_pendingMessageTimers.insert(clientMessageId, timeoutTimer);
     m_pendingMessageConversationIds.insert(clientMessageId, conversationId);
