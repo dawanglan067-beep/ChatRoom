@@ -2149,6 +2149,26 @@ void MainWindow::loadMessagesForConversation(int index, qint64 beforeId, bool pr
             messages.append(ChatUtils::messageFromBackendPayload(value.toObject(), m_loggedInUserEmail));
         }
 
+        if (!prepend) {
+            const Conversation *existingConv = m_chatStore->conversationAt(index);
+            if (existingConv) {
+                QSet<QString> serverClientIds;
+                for (const Message &msg : std::as_const(messages)) {
+                    if (!msg.clientMessageId.isEmpty()) {
+                        serverClientIds.insert(msg.clientMessageId);
+                    }
+                }
+                for (const Message &msg : existingConv->messages) {
+                    if (msg.status == Message::DeliveryStatus::Queued
+                        || msg.status == Message::DeliveryStatus::Sending) {
+                        if (!msg.clientMessageId.isEmpty() && !serverClientIds.contains(msg.clientMessageId)) {
+                            messages.append(msg);
+                        }
+                    }
+                }
+            }
+        }
+
         const bool dataChanged = prepend
             ? m_chatStore->prependMessagesForConversation(index, std::move(messages))
             : m_chatStore->replaceMessagesForConversation(index, std::move(messages));
