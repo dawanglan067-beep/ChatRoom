@@ -42,6 +42,8 @@ qt_add_executable(ChatRoom
     networkservice.cpp
     networkservice.h
     securestorage.cpp
+    socialdialogs.cpp
+    socialdialogs.h
     timeformatutils.cpp
     timeformatutils.h
     messagebubbledelegate.cpp

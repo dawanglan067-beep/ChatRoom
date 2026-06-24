@@ -14,6 +14,7 @@
 #include "messagehandler.h"
 #include "messagelistmodel.h"
 #include "profilemanager.h"
+#include "socialdialogs.h"
 #include "timeformatutils.h"
 #include "uitexts.h"
 
@@ -2478,56 +2479,7 @@ void MainWindow::showFriendsDialog()
         setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
         return;
     }
-
-    auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(UiText::MainWindow::kFriendsList);
-    dialog->resize(500, 420);
-
-    auto *layout = new QVBoxLayout(dialog);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
-
-    auto *listWidget = new QListWidget(dialog);
-    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    layout->addWidget(listWidget, 1);
-
-    auto *addLayout = new QHBoxLayout();
-    auto *emailInput = new QLineEdit(dialog);
-    emailInput->setPlaceholderText(UiText::MainWindow::kAddFriendPlaceholder);
-    auto *addButton = new QPushButton(UiText::MainWindow::kAddButton, dialog);
-    addLayout->addWidget(emailInput, 1);
-    addLayout->addWidget(addButton);
-    layout->addLayout(addLayout);
-
-    auto *buttonBox = new QDialogButtonBox(dialog);
-    buttonBox->addButton(QDialogButtonBox::Close);
-    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
-    layout->addWidget(buttonBox);
-
-    connect(m_profileManager, &ProfileManager::friendsLoaded, dialog, [listWidget](const QJsonObject &result) {
-        listWidget->clear();
-        const QJsonArray friends = result.value(QStringLiteral("friends")).toArray();
-        for (const QJsonValue &value : friends) {
-            const QJsonObject f = value.toObject();
-            const QString nickname = f.value(QStringLiteral("nickname")).toString().trimmed();
-            const QString email = f.value(QStringLiteral("email")).toString().trimmed();
-            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
-            auto *item = new QListWidgetItem(display, listWidget);
-            item->setData(Qt::UserRole, email);
-        }
-    });
-
-    connect(addButton, &QPushButton::clicked, dialog, [this, emailInput]() {
-        const QString email = emailInput->text().trimmed().toLower();
-        if (email.isEmpty()) return;
-        m_profileManager->sendFriendRequest(m_backendBaseUrl, email);
-        emailInput->clear();
-    });
-
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
-
-    m_profileManager->loadFriends(m_backendBaseUrl);
-    dialog->exec();
+    FriendsDialog dialog(m_profileManager, m_backendBaseUrl, this);
 }
 
 void MainWindow::showFriendRequestsDialog()
@@ -2536,79 +2488,7 @@ void MainWindow::showFriendRequestsDialog()
         setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
         return;
     }
-
-    auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(UiText::MainWindow::kFriendRequests);
-    dialog->resize(500, 420);
-
-    auto *layout = new QVBoxLayout(dialog);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
-
-    auto *listWidget = new QListWidget(dialog);
-    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    layout->addWidget(listWidget, 1);
-
-    auto *buttonBox = new QDialogButtonBox(dialog);
-    auto *acceptButton = buttonBox->addButton(UiText::MainWindow::kAccept, QDialogButtonBox::AcceptRole);
-    auto *rejectButton = buttonBox->addButton(UiText::MainWindow::kReject, QDialogButtonBox::DestructiveRole);
-    buttonBox->addButton(QDialogButtonBox::Close);
-    acceptButton->setEnabled(false);
-    rejectButton->setEnabled(false);
-    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
-    layout->addWidget(buttonBox);
-
-    connect(listWidget, &QListWidget::itemSelectionChanged, dialog, [listWidget, acceptButton, rejectButton]() {
-        const bool hasSelection = listWidget->currentItem() != nullptr;
-        acceptButton->setEnabled(hasSelection);
-        rejectButton->setEnabled(hasSelection);
-    });
-
-    auto refreshList = [this, listWidget, dialog]() {
-        Q_UNUSED(dialog);
-        listWidget->clear();
-        m_profileManager->loadFriendRequests(m_backendBaseUrl);
-    };
-
-    connect(m_profileManager, &ProfileManager::friendRequestsLoaded, dialog, [listWidget](const QJsonObject &result) {
-        listWidget->clear();
-        const QJsonArray requests = result.value(QStringLiteral("requests")).toArray();
-        for (const QJsonValue &value : requests) {
-            const QJsonObject r = value.toObject();
-            const qint64 requestId = r.value(QStringLiteral("id")).toInteger(0);
-            const QString nickname = r.value(QStringLiteral("senderNickname")).toString().trimmed();
-            const QString email = r.value(QStringLiteral("senderEmail")).toString().trimmed();
-            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
-            auto *item = new QListWidgetItem(display, listWidget);
-            item->setData(Qt::UserRole, requestId);
-        }
-        if (listWidget->count() == 0) {
-            listWidget->addItem(UiText::MainWindow::kNoFriendRequests);
-        }
-    });
-
-    connect(acceptButton, &QPushButton::clicked, dialog, [this, listWidget]() {
-        QListWidgetItem *item = listWidget->currentItem();
-        if (!item) return;
-        const qint64 requestId = item->data(Qt::UserRole).toLongLong();
-        if (requestId <= 0) return;
-        m_profileManager->acceptFriendRequest(m_backendBaseUrl, requestId);
-        delete listWidget->takeItem(listWidget->row(item));
-    });
-
-    connect(rejectButton, &QPushButton::clicked, dialog, [this, listWidget]() {
-        QListWidgetItem *item = listWidget->currentItem();
-        if (!item) return;
-        const qint64 requestId = item->data(Qt::UserRole).toLongLong();
-        if (requestId <= 0) return;
-        m_profileManager->rejectFriendRequest(m_backendBaseUrl, requestId);
-        delete listWidget->takeItem(listWidget->row(item));
-    });
-
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
-
-    refreshList();
-    dialog->exec();
+    FriendRequestsDialog dialog(m_profileManager, m_backendBaseUrl, this);
 }
 
 void MainWindow::logout()
@@ -2649,76 +2529,7 @@ void MainWindow::showBlacklistDialog()
         setNetworkStatus(UiText::MainWindow::kStatusSignInRequired);
         return;
     }
-
-    auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(UiText::MainWindow::kBlacklist);
-    dialog->resize(460, 380);
-
-    auto *layout = new QVBoxLayout(dialog);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(10);
-
-    auto *listWidget = new QListWidget(dialog);
-    listWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    layout->addWidget(listWidget, 1);
-
-    auto *addLayout = new QHBoxLayout();
-    auto *emailInput = new QLineEdit(dialog);
-    emailInput->setPlaceholderText(UiText::MainWindow::kBlockEmailPlaceholder);
-    auto *blockButton = new QPushButton(UiText::MainWindow::kBlockButton, dialog);
-    addLayout->addWidget(emailInput, 1);
-    addLayout->addWidget(blockButton);
-    layout->addLayout(addLayout);
-
-    auto *buttonBox = new QDialogButtonBox(dialog);
-    auto *unblockButton = buttonBox->addButton(UiText::MainWindow::kUnblockUser, QDialogButtonBox::ActionRole);
-    buttonBox->addButton(QDialogButtonBox::Close);
-    unblockButton->setEnabled(false);
-    connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
-    layout->addWidget(buttonBox);
-
-    connect(listWidget, &QListWidget::itemSelectionChanged, dialog, [listWidget, unblockButton]() {
-        unblockButton->setEnabled(listWidget->currentItem() != nullptr);
-    });
-
-    connect(m_profileManager, &ProfileManager::blacklistLoaded, dialog, [listWidget](const QJsonObject &result) {
-        listWidget->clear();
-        const QJsonArray blocked = result.value(QStringLiteral("blockedUsers")).toArray();
-        for (const QJsonValue &value : blocked) {
-            const QJsonObject u = value.toObject();
-            const qint64 userId = u.value(QStringLiteral("id")).toInteger(0);
-            const QString nickname = u.value(QStringLiteral("nickname")).toString().trimmed();
-            const QString email = u.value(QStringLiteral("email")).toString().trimmed();
-            const QString display = nickname.isEmpty() ? email : QStringLiteral("%1 (%2)").arg(nickname, email);
-            auto *item = new QListWidgetItem(display, listWidget);
-            item->setData(Qt::UserRole, userId);
-        }
-        if (listWidget->count() == 0) {
-            listWidget->addItem(UiText::MainWindow::kBlacklistEmptyItem);
-        }
-    });
-
-    connect(blockButton, &QPushButton::clicked, dialog, [this, emailInput]() {
-        const QString email = emailInput->text().trimmed().toLower();
-        if (email.isEmpty()) return;
-        m_profileManager->blockUser(m_backendBaseUrl, email);
-        emailInput->clear();
-        m_profileManager->loadBlacklist(m_backendBaseUrl);
-    });
-
-    connect(unblockButton, &QPushButton::clicked, dialog, [this, listWidget]() {
-        QListWidgetItem *item = listWidget->currentItem();
-        if (!item) return;
-        const qint64 userId = item->data(Qt::UserRole).toLongLong();
-        if (userId <= 0) return;
-        m_profileManager->unblockUser(m_backendBaseUrl, userId);
-        delete listWidget->takeItem(listWidget->row(item));
-    });
-
-    connect(m_profileManager, &ProfileManager::networkStatusChanged, dialog, [this](const QString &s, const QString &d) { setNetworkStatus(s, d); });
-
-    m_profileManager->loadBlacklist(m_backendBaseUrl);
-    dialog->exec();
+    BlacklistDialog dialog(m_profileManager, m_backendBaseUrl, this);
 }
 
 void MainWindow::inviteMembersToCurrentConversation()
