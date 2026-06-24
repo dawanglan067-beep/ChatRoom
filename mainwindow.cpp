@@ -274,6 +274,7 @@ void MainWindow::sendCurrentMessage()
 
     if (!m_chatClient->isConnected()) {
         m_chatStore->markMessageFailed(conversationId, clientMessageId);
+        m_messageHandler->removePendingConversationMapping(clientMessageId);
         setNetworkStatus(UiText::MainWindow::kStatusMessageSendFailed,
                          UiText::MainWindow::kStatusMessageSendFailedDetail);
         saveDraftForConversation(conversationId, QString());
