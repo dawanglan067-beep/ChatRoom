@@ -46,8 +46,12 @@ bool DatabaseManager::open(const QString &userEmail)
         }
 
         QSqlQuery query(db);
-        query.exec(QStringLiteral("PRAGMA journal_mode=WAL"));
-        query.exec(QStringLiteral("PRAGMA foreign_keys=ON"));
+        if (!query.exec(QStringLiteral("PRAGMA journal_mode=WAL"))) {
+            qWarning() << "DatabaseManager: PRAGMA journal_mode failed:" << query.lastError().text();
+        }
+        if (!query.exec(QStringLiteral("PRAGMA foreign_keys=ON"))) {
+            qWarning() << "DatabaseManager: PRAGMA foreign_keys failed:" << query.lastError().text();
+        }
     }
 
     return createTables();
@@ -118,8 +122,12 @@ bool DatabaseManager::createTables()
         return false;
     }
 
-    query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, timestamp)"));
-    query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_messages_server_id ON messages(conversation_id, server_message_id)"));
+    if (!query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, timestamp)"))) {
+        qWarning() << "DatabaseManager: create idx_messages_conv failed:" << query.lastError().text();
+    }
+    if (!query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_messages_server_id ON messages(conversation_id, server_message_id)"))) {
+        qWarning() << "DatabaseManager: create idx_messages_server_id failed:" << query.lastError().text();
+    }
 
     return true;
 }
@@ -246,7 +254,10 @@ QList<Message> DatabaseManager::loadMessages(const QString &conversationId, int 
         "FROM messages WHERE conversation_id = ? ORDER BY timestamp DESC LIMIT ?"));
     query.addBindValue(conversationId);
     query.addBindValue(limit);
-    query.exec();
+    if (!query.exec()) {
+        qWarning() << "DatabaseManager::loadMessages failed:" << query.lastError().text();
+        return result;
+    }
 
     QList<Message> reversed;
     while (query.next()) {
@@ -290,7 +301,9 @@ void DatabaseManager::appendMessage(const QString &conversationId, const Message
     query.addBindValue(message.timestamp);
     query.addBindValue(static_cast<int>(message.status));
     query.addBindValue(message.senderAvatarUrl);
-    query.exec();
+    if (!query.exec()) {
+        qWarning() << "DatabaseManager::appendMessage failed:" << query.lastError().text();
+    }
 }
 
 void DatabaseManager::updateMessage(const QString &conversationId, qint64 serverMessageId, const Message &message)
@@ -312,5 +325,7 @@ void DatabaseManager::updateMessage(const QString &conversationId, qint64 server
     query.addBindValue(message.senderAvatarUrl);
     query.addBindValue(conversationId);
     query.addBindValue(serverMessageId);
-    query.exec();
+    if (!query.exec()) {
+        qWarning() << "DatabaseManager::updateMessage failed:" << query.lastError().text();
+    }
 }
