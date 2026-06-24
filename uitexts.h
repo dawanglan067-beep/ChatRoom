@@ -65,6 +65,13 @@ inline const QString kQueued = QStringLiteral("排队中");
 inline const QString kDelivered = QStringLiteral("已送达");
 inline const QString kRead = QStringLiteral("已读");
 inline const QString kFailed = QStringLiteral("发送失败");
+
+// Media display
+inline const QString kImageTag = QStringLiteral("图片");
+inline const QString kFileTag = QStringLiteral("文件");
+inline const QString kImageLoadingPlaceholder = QStringLiteral("\U0001f5bc \u56fe\u7247\u52a0\u8f7d\u4e2d...");
+inline const QString kClickToOpen = QStringLiteral("\u70b9\u51fb\u6253\u5f00");
+inline const QString kClickToOpenWithSizePattern = QStringLiteral("%1 \u00b7 \u70b9\u51fb\u6253\u5f00");
 }
 
 namespace MainWindow
@@ -346,6 +353,67 @@ inline const QString kSendFileButton = QStringLiteral("发送文件");
 // Status messages
 inline const QString kStatusImageOpened = QStringLiteral("状态：图片已打开");
 inline const QString kStatusImageOpenFailed = QStringLiteral("状态：打开文件失败");
+
+// Reply
+inline const QString kReplyAction = QStringLiteral("回复");
+inline const QString kReplyContentPattern = QStringLiteral("\u21a9 \u56de\u590d %1: %2\n%3");
+inline const QString kReplyPreviewPattern = QStringLiteral("\u56de\u590d %1: %2");
+
+// Create group dialog
+inline const QString kCreateGroupTitle = QStringLiteral("\u521b\u5efa\u7fa4\u804a");
+inline const QString kGroupNameLabel = QStringLiteral("\u7fa4\u540d\u79f0");
+inline const QString kGroupNamePlaceholder = QStringLiteral("\u8f93\u5165\u7fa4\u804a\u540d\u79f0");
+inline const QString kInviteMembersLabel = QStringLiteral("\u9080\u8bf7\u6210\u5458");
+inline const QString kAddMemberEmailPlaceholder = QStringLiteral("\u8f93\u5165\u90ae\u7bb1\uff0c\u56de\u8f66\u6dfb\u52a0");
+inline const QString kAddButton = QStringLiteral("\u6dfb\u52a0");
+
+// Recall message confirm
+inline const QString kRecallConfirmTitle = QStringLiteral("\u64a4\u56de\u6d88\u606f");
+inline const QString kRecallConfirmPattern = QStringLiteral("\u786e\u5b9a\u8981\u64a4\u56de\u8fd9\u6761\u6d88\u606f\u5417\uff1f\n\n\"%1\"");
+
+// Typing status
+inline const QString kTypingSinglePattern = QStringLiteral("%1 \u6b63\u5728\u8f93\u5165...");
+inline const QString kTypingDualPattern = QStringLiteral("%1\u3001%2 \u6b63\u5728\u8f93\u5165...");
+inline const QString kTypingMultiplePattern = QStringLiteral("%1 \u7b49 %2 \u4eba\u6b63\u5728\u8f93\u5165...");
+
+// Profile dialog extras
+inline const QString kNicknamePlaceholder = QStringLiteral("\u8f93\u5165\u65b0\u6635\u79f0");
+inline const QString kNicknameLabel = QStringLiteral("\u6635\u79f0");
+inline const QString kEmailLabelShort = QStringLiteral("\u90ae\u7bb1");
+
+// Friends dialog extras
+inline const QString kAddFriendPlaceholder = QStringLiteral("\u8f93\u5165\u5bf9\u65b9\u90ae\u7bb1\u6dfb\u52a0\u597d\u53cb");
+inline const QString kNoFriendRequests = QStringLiteral("\u6682\u65e0\u597d\u53cb\u8bf7\u6c42");
+
+// Blacklist dialog extras
+inline const QString kBlockEmailPlaceholder = QStringLiteral("\u8f93\u5165\u90ae\u7bb1\u62c9\u9ed1\u7528\u6237");
+inline const QString kBlockButton = QStringLiteral("\u62c9\u9ed1");
+inline const QString kBlacklistEmptyItem = QStringLiteral("\u9ed1\u540d\u5355\u4e3a\u7a7a");
+
+// Group member operations
+inline const QString kNotGroupChatStatus = QStringLiteral("\u5f53\u524d\u4e0d\u662f\u7fa4\u804a");
+inline const QString kInviteEmailPrompt = QStringLiteral("\u8f93\u5165\u8981\u9080\u8bf7\u7684\u90ae\u7bb1\uff08\u591a\u4e2a\u7528\u9017\u53f7\u5206\u9694\uff09");
+inline const QString kNoMemberInfo = QStringLiteral("\u6682\u65e0\u6210\u5458\u4fe1\u606f");
+inline const QString kNoRemovableMembers = QStringLiteral("\u6ca1\u6709\u53ef\u79fb\u9664\u7684\u6210\u5458");
+inline const QString kSelectMemberToRemove = QStringLiteral("\u9009\u62e9\u8981\u79fb\u9664\u7684\u6210\u5458");
+inline const QString kConfirmRemoveTitle = QStringLiteral("\u786e\u8ba4\u79fb\u9664");
+inline const QString kConfirmRemoveMemberPattern = QStringLiteral("\u786e\u5b9a\u8981\u5c06 %1 \u79fb\u51fa\u7fa4\u804a\u5417\uff1f");
+inline const QString kGroupMembersTitlePattern = QStringLiteral("\u7fa4\u6210\u5458 - %1");
+inline const QString kSelfTagShort = QStringLiteral(" (\u6211)");
+inline const QString kOnlineSuffix = QStringLiteral(" \u5728\u7ebf");
+inline const QString kOfflineSuffix = QStringLiteral(" \u79bb\u7ebf");
+
+// Leave group confirm
+inline const QString kLeaveGroupConfirmPattern = QStringLiteral("\u786e\u5b9a\u8981\u9000\u51fa\u300c%1\u300d\u5417\uff1f");
+
+// Delete conversation confirm pattern (with name)
+inline const QString kDeleteConversationConfirmPattern = QStringLiteral("\u786e\u5b9a\u8981\u5220\u9664\u300c%1\u300d\u5417\uff1f");
+
+// Conversation meta
+inline const QString kGroupChatType = QStringLiteral("\u7fa4\u804a");
+inline const QString kPrivateChatType = QStringLiteral("\u79c1\u804a");
+inline const QString kMemberCountMetaPattern = QStringLiteral(" \u00b7 %1 \u4eba");
+inline const QString kOnlineCountMetaPattern = QStringLiteral(" \u00b7 %1 \u5728\u7ebf");
 }
 
 namespace MessageHandler
@@ -374,6 +442,20 @@ inline const QString kAvatarEmpty = QStringLiteral("头像图片为空。");
 inline const QString kAvatarTooLarge = QStringLiteral("头像图片过大，当前仅支持不超过 8MB 的图片。");
 inline const QString kSelectImageFile = QStringLiteral("请选择图片文件作为头像。");
 inline const QString kUploadingAvatar = QStringLiteral("状态：正在上传头像");
+}
+
+namespace MediaUtils
+{
+inline const QString kImagePreviewPrefix = QStringLiteral("[\u56fe\u7247]");
+inline const QString kFilePreviewPrefix = QStringLiteral("[\u6587\u4ef6]");
+inline const QString kSelfPrefix = QStringLiteral("\u4f60: %1");
+inline const QString kSystemMessagePreviewPattern = QStringLiteral("\u7cfb\u7edf\u6d88\u606f: %1");
+}
+
+namespace ProfileManager
+{
+inline const QString kTypingSinglePattern = QStringLiteral("%1 \u6b63\u5728\u8f93\u5165...");
+inline const QString kTypingMultiplePattern = QStringLiteral("%1 \u7b49\u4eba\u6b63\u5728\u8f93\u5165...");
 }
 }
 

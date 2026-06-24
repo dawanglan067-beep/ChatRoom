@@ -509,7 +509,7 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
             loadFont.setPointSizeF(qMax(9.0, option.font.pointSizeF()));
             painter->setFont(loadFont);
             painter->setPen(isSelf ? QColor(255, 255, 255, 150) : QColor(QStringLiteral("#9ca3af")));
-            painter->drawText(previewRect, Qt::AlignCenter, QStringLiteral("🖼 图片加载中..."));
+            painter->drawText(previewRect, Qt::AlignCenter, UiText::MessageBubble::kImageLoadingPlaceholder);
         }
 
         contentRect.setTop(previewRect.bottom() + 8);
@@ -553,8 +553,8 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         painter->setPen(isSelf ? QColor(255, 255, 255, 170) : QColor(QStringLiteral("#64748B")));
         const QString sizeText = formatFileSize(mediaSize);
         const QString detailText = sizeText.isEmpty()
-            ? QStringLiteral("点击打开")
-            : QStringLiteral("%1 · 点击打开").arg(sizeText);
+            ? UiText::MessageBubble::kClickToOpen
+            : UiText::MessageBubble::kClickToOpenWithSizePattern.arg(sizeText);
         const QRect detailRect(nameRect.left(), nameRect.bottom() + 3, nameRect.width(), 18);
         painter->drawText(detailRect, Qt::AlignLeft | Qt::AlignVCenter, detailText);
 

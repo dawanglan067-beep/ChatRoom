@@ -431,7 +431,7 @@ void ProfileManager::updateTypingStatusLabel()
 
     names.sort();
     const QString text = names.size() == 1
-        ? QStringLiteral("%1 正在输入...").arg(names.first())
-        : QStringLiteral("%1 等人正在输入...").arg(names.first());
+        ? UiText::ProfileManager::kTypingSinglePattern.arg(names.first())
+        : UiText::ProfileManager::kTypingMultiplePattern.arg(names.first());
     emit typingStatusLabelUpdated(text, true);
 }

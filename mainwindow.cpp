@@ -254,7 +254,7 @@ void MainWindow::sendCurrentMessage()
 
     QString displayContent = messageText;
     if (m_replyToMessageId > 0) {
-        displayContent = QStringLiteral("↩ 回复 %1: %2\n%3")
+        displayContent = UiText::MainWindow::kReplyContentPattern
             .arg(m_replyToSender, m_replyToContent.left(60), messageText);
     }
 
@@ -367,30 +367,30 @@ void MainWindow::createGroupConversation()
     }
 
     QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("创建群聊"));
+    dialog.setWindowTitle(UiText::MainWindow::kCreateGroupTitle);
     dialog.resize(460, 420);
 
     auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(20, 20, 20, 20);
     layout->setSpacing(12);
 
-    auto *nameLabel = new QLabel(QStringLiteral("群名称"), &dialog);
+    auto *nameLabel = new QLabel(UiText::MainWindow::kGroupNameLabel, &dialog);
     nameLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
     auto *nameInput = new QLineEdit(&dialog);
-    nameInput->setPlaceholderText(QStringLiteral("输入群聊名称"));
+    nameInput->setPlaceholderText(UiText::MainWindow::kGroupNamePlaceholder);
     nameInput->setMinimumHeight(40);
     layout->addWidget(nameLabel);
     layout->addWidget(nameInput);
 
-    auto *memberLabel = new QLabel(QStringLiteral("邀请成员"), &dialog);
+    auto *memberLabel = new QLabel(UiText::MainWindow::kInviteMembersLabel, &dialog);
     memberLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
     layout->addWidget(memberLabel);
 
     auto *addLayout = new QHBoxLayout();
     auto *emailInput = new QLineEdit(&dialog);
-    emailInput->setPlaceholderText(QStringLiteral("输入邮箱，回车添加"));
+    emailInput->setPlaceholderText(UiText::MainWindow::kAddMemberEmailPlaceholder);
     emailInput->setMinimumHeight(40);
-    auto *addButton = new QPushButton(QStringLiteral("添加"), &dialog);
+    auto *addButton = new QPushButton(UiText::MainWindow::kAddButton, &dialog);
     addButton->setMinimumHeight(40);
     addLayout->addWidget(emailInput, 1);
     addLayout->addWidget(addButton);
@@ -401,7 +401,7 @@ void MainWindow::createGroupConversation()
     layout->addWidget(memberList, 1);
 
     auto *buttonBox = new QDialogButtonBox(&dialog);
-    auto *createButton = buttonBox->addButton(QStringLiteral("创建群聊"), QDialogButtonBox::AcceptRole);
+    auto *createButton = buttonBox->addButton(UiText::MainWindow::kCreateGroupTitle, QDialogButtonBox::AcceptRole);
     buttonBox->addButton(QDialogButtonBox::Cancel);
     createButton->setEnabled(false);
     layout->addWidget(buttonBox);
@@ -589,7 +589,7 @@ void MainWindow::toggleFavoriteForMessageIndex(const QModelIndex &index)
         persistFavoritesToSettings();
         m_messageHandler->refreshFavoriteHighlights();
         setNetworkStatus(UiText::MainWindow::kStatusFavoriteRemoved,
-                         QStringLiteral("消息 ID: %1").arg(serverMessageId));
+                         UiText::MainWindow::kMessageIdPattern.arg(serverMessageId));
         return;
     }
 
@@ -605,7 +605,7 @@ void MainWindow::toggleFavoriteForMessageIndex(const QModelIndex &index)
     persistFavoritesToSettings();
     m_messageHandler->refreshFavoriteHighlights();
     setNetworkStatus(UiText::MainWindow::kStatusFavorited,
-                     QStringLiteral("消息 ID: %1").arg(serverMessageId));
+                     UiText::MainWindow::kMessageIdPattern.arg(serverMessageId));
 }
 
 void MainWindow::recallMessageByIndex(const QModelIndex &index)
@@ -638,8 +638,8 @@ void MainWindow::recallMessageByIndex(const QModelIndex &index)
 
     const auto decision = QMessageBox::question(
         this,
-        QStringLiteral("撤回消息"),
-        QStringLiteral("确定要撤回这条消息吗？\n\n\"%1\"").arg(preview));
+        UiText::MainWindow::kRecallConfirmTitle,
+        UiText::MainWindow::kRecallConfirmPattern.arg(preview));
 
     if (decision != QMessageBox::Yes) {
         return;
@@ -647,7 +647,7 @@ void MainWindow::recallMessageByIndex(const QModelIndex &index)
 
     m_chatClient->recallMessage(conversationId, serverMessageId);
     setNetworkStatus(UiText::MainWindow::kStatusRecallRequested,
-                     QStringLiteral("消息 ID: %1").arg(serverMessageId));
+                     UiText::MainWindow::kMessageIdPattern.arg(serverMessageId));
 }
 
 void MainWindow::openMediaLinkByIndex(const QModelIndex &index)
@@ -696,7 +696,7 @@ void MainWindow::openMediaLinkByIndex(const QModelIndex &index)
         reply->deleteLater();
 
         if (!requestOk) {
-            setNetworkStatus(QStringLiteral("状态：打开文件失败"),
+            setNetworkStatus(UiText::MainWindow::kStatusImageOpenFailed,
                              UiText::MainWindow::kDetailDownloadFailedPattern.arg(statusCode));
             return;
         }
@@ -721,7 +721,7 @@ void MainWindow::openMediaLinkByIndex(const QModelIndex &index)
             QPixmap pixmap;
             if (pixmap.loadFromData(bytes)) {
                 showImagePreviewDialog(this, baseName, pixmap, localPath);
-                setNetworkStatus(QStringLiteral("状态：图片已打开"), baseName);
+                setNetworkStatus(UiText::MainWindow::kStatusImageOpened, baseName);
                 return;
             }
         }
@@ -977,11 +977,11 @@ void MainWindow::updateTypingStatusLabel()
     names.sort();
     QString text;
     if (names.size() == 1) {
-        text = QStringLiteral("%1 正在输入...").arg(names.first());
+        text = UiText::MainWindow::kTypingSinglePattern.arg(names.first());
     } else if (names.size() == 2) {
-        text = QStringLiteral("%1、%2 正在输入...").arg(names.at(0), names.at(1));
+        text = UiText::MainWindow::kTypingDualPattern.arg(names.at(0), names.at(1));
     } else {
-        text = QStringLiteral("%1 等 %2 人正在输入...").arg(names.first()).arg(names.size());
+        text = UiText::MainWindow::kTypingMultiplePattern.arg(names.first()).arg(names.size());
     }
 
     m_typingStatusLabel->setText(text);
@@ -991,7 +991,7 @@ void MainWindow::updateTypingStatusLabel()
 void MainWindow::showFavoriteMessagesDialog()
 {
     if (m_favoriteMessagesByKey.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("收藏夹"), QStringLiteral("当前没有收藏消息。"));
+        QMessageBox::information(this, UiText::MainWindow::kFavorites, UiText::MainWindow::kNoFavorites);
         return;
     }
 
@@ -1002,14 +1002,14 @@ void MainWindow::showFavoriteMessagesDialog()
     });
 
     QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("收藏夹"));
+    dialog.setWindowTitle(UiText::MainWindow::kFavorites);
     dialog.resize(680, 460);
 
     auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(14, 14, 14, 14);
     layout->setSpacing(10);
 
-    auto *summaryLabel = new QLabel(QStringLiteral("已收藏 %1 条消息").arg(items.size()), &dialog);
+    auto *summaryLabel = new QLabel(UiText::MainWindow::kFavoritesCountPattern.arg(items.size()), &dialog);
     layout->addWidget(summaryLabel);
 
     auto *listWidget = new QListWidget(&dialog);
@@ -1037,8 +1037,8 @@ void MainWindow::showFavoriteMessagesDialog()
     layout->addWidget(listWidget, 1);
 
     auto *buttonBox = new QDialogButtonBox(&dialog);
-    QPushButton *locateButton = buttonBox->addButton(QStringLiteral("定位消息"), QDialogButtonBox::ActionRole);
-    QPushButton *removeButton = buttonBox->addButton(QStringLiteral("移除收藏"), QDialogButtonBox::DestructiveRole);
+    QPushButton *locateButton = buttonBox->addButton(UiText::MainWindow::kLocateMessage, QDialogButtonBox::ActionRole);
+    QPushButton *removeButton = buttonBox->addButton(UiText::MainWindow::kRemoveFavorite, QDialogButtonBox::DestructiveRole);
     buttonBox->addButton(QDialogButtonBox::Close);
     locateButton->setEnabled(false);
     removeButton->setEnabled(false);
@@ -1188,9 +1188,9 @@ void MainWindow::showQueuedMessagesDialog()
     layout->addWidget(listWidget, 1);
 
     auto *buttonBox = new QDialogButtonBox(&dialog);
-    QPushButton *resendAllButton = buttonBox->addButton(QStringLiteral("重发全部"), QDialogButtonBox::ActionRole);
+    QPushButton *resendAllButton = buttonBox->addButton(UiText::MainWindow::kResendAll, QDialogButtonBox::ActionRole);
     QPushButton *removeSelectedButton =
-        buttonBox->addButton(QStringLiteral("删除选中"), QDialogButtonBox::DestructiveRole);
+        buttonBox->addButton(UiText::MainWindow::kDeleteSelected, QDialogButtonBox::DestructiveRole);
     buttonBox->addButton(QDialogButtonBox::Close);
     connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     layout->addWidget(buttonBox);
@@ -1555,8 +1555,8 @@ void MainWindow::setupUi()
     m_sendButton->setObjectName(QStringLiteral("sendButton"));
     m_sendButton->setCursor(Qt::PointingHandCursor);
 
-    m_emojiButton = new QPushButton(QStringLiteral("😀"), composerFrame);
-    m_emojiButton->setObjectName(QStringLiteral("sendFileButton"));
+    m_emojiButton = new QPushButton(QStringLiteral("\U0001f600"), composerFrame);
+    m_emojiButton->setObjectName(QStringLiteral("emojiButton"));
     m_emojiButton->setCursor(Qt::PointingHandCursor);
     m_emojiButton->setFixedSize(46, 46);
     m_emojiButton->setStyleSheet(
@@ -1756,7 +1756,7 @@ void MainWindow::setupConnections()
             isFavoriteMessage(conversationId, serverMessageId)
                 ? UiText::MainWindow::kUnfavoriteMessage
                 : UiText::MainWindow::kFavoriteMessage);
-        QAction *replyAction = menu.addAction(QStringLiteral("回复"));
+        QAction *replyAction = menu.addAction(UiText::MainWindow::kReplyAction);
         QAction *copyAction = menu.addAction(UiText::MainWindow::kCopyMessage);
 
         QAction *selectedAction = menu.exec(m_messageListView->viewport()->mapToGlobal(point));
@@ -2521,13 +2521,13 @@ void MainWindow::showProfileDialog()
     layout->addWidget(avatarLabel);
 
     auto *nicknameEdit = new QLineEdit(m_loggedInUserNickname, &dialog);
-    nicknameEdit->setPlaceholderText(QStringLiteral("输入新昵称"));
-    layout->addWidget(new QLabel(QStringLiteral("昵称"), &dialog));
+    nicknameEdit->setPlaceholderText(UiText::MainWindow::kNicknamePlaceholder);
+    layout->addWidget(new QLabel(UiText::MainWindow::kNicknameLabel, &dialog));
     layout->addWidget(nicknameEdit);
 
     auto *emailLabel = new QLabel(m_loggedInUserEmail, &dialog);
     emailLabel->setStyleSheet(QStringLiteral("color: #6b7280;"));
-    layout->addWidget(new QLabel(QStringLiteral("邮箱"), &dialog));
+    layout->addWidget(new QLabel(UiText::MainWindow::kEmailLabelShort, &dialog));
     layout->addWidget(emailLabel);
 
     auto *buttonBox = new QDialogButtonBox(&dialog);
@@ -2554,7 +2554,7 @@ void MainWindow::showFriendsDialog()
     }
 
     auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(QStringLiteral("好友列表"));
+    dialog->setWindowTitle(UiText::MainWindow::kFriendsList);
     dialog->resize(500, 420);
 
     auto *layout = new QVBoxLayout(dialog);
@@ -2567,8 +2567,8 @@ void MainWindow::showFriendsDialog()
 
     auto *addLayout = new QHBoxLayout();
     auto *emailInput = new QLineEdit(dialog);
-    emailInput->setPlaceholderText(QStringLiteral("输入对方邮箱添加好友"));
-    auto *addButton = new QPushButton(QStringLiteral("添加"), dialog);
+    emailInput->setPlaceholderText(UiText::MainWindow::kAddFriendPlaceholder);
+    auto *addButton = new QPushButton(UiText::MainWindow::kAddButton, dialog);
     addLayout->addWidget(emailInput, 1);
     addLayout->addWidget(addButton);
     layout->addLayout(addLayout);
@@ -2612,7 +2612,7 @@ void MainWindow::showFriendRequestsDialog()
     }
 
     auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(QStringLiteral("好友请求"));
+    dialog->setWindowTitle(UiText::MainWindow::kFriendRequests);
     dialog->resize(500, 420);
 
     auto *layout = new QVBoxLayout(dialog);
@@ -2624,8 +2624,8 @@ void MainWindow::showFriendRequestsDialog()
     layout->addWidget(listWidget, 1);
 
     auto *buttonBox = new QDialogButtonBox(dialog);
-    auto *acceptButton = buttonBox->addButton(QStringLiteral("接受"), QDialogButtonBox::AcceptRole);
-    auto *rejectButton = buttonBox->addButton(QStringLiteral("拒绝"), QDialogButtonBox::DestructiveRole);
+    auto *acceptButton = buttonBox->addButton(UiText::MainWindow::kAccept, QDialogButtonBox::AcceptRole);
+    auto *rejectButton = buttonBox->addButton(UiText::MainWindow::kReject, QDialogButtonBox::DestructiveRole);
     buttonBox->addButton(QDialogButtonBox::Close);
     acceptButton->setEnabled(false);
     rejectButton->setEnabled(false);
@@ -2657,7 +2657,7 @@ void MainWindow::showFriendRequestsDialog()
             item->setData(Qt::UserRole, requestId);
         }
         if (listWidget->count() == 0) {
-            listWidget->addItem(QStringLiteral("暂无好友请求"));
+            listWidget->addItem(UiText::MainWindow::kNoFriendRequests);
         }
     });
 
@@ -2725,7 +2725,7 @@ void MainWindow::showBlacklistDialog()
     }
 
     auto *dialog = new QDialog(this);
-    dialog->setWindowTitle(QStringLiteral("黑名单"));
+    dialog->setWindowTitle(UiText::MainWindow::kBlacklist);
     dialog->resize(460, 380);
 
     auto *layout = new QVBoxLayout(dialog);
@@ -2738,14 +2738,14 @@ void MainWindow::showBlacklistDialog()
 
     auto *addLayout = new QHBoxLayout();
     auto *emailInput = new QLineEdit(dialog);
-    emailInput->setPlaceholderText(QStringLiteral("输入邮箱拉黑用户"));
-    auto *blockButton = new QPushButton(QStringLiteral("拉黑"), dialog);
+    emailInput->setPlaceholderText(UiText::MainWindow::kBlockEmailPlaceholder);
+    auto *blockButton = new QPushButton(UiText::MainWindow::kBlockButton, dialog);
     addLayout->addWidget(emailInput, 1);
     addLayout->addWidget(blockButton);
     layout->addLayout(addLayout);
 
     auto *buttonBox = new QDialogButtonBox(dialog);
-    auto *unblockButton = buttonBox->addButton(QStringLiteral("解除拉黑"), QDialogButtonBox::ActionRole);
+    auto *unblockButton = buttonBox->addButton(UiText::MainWindow::kUnblockUser, QDialogButtonBox::ActionRole);
     buttonBox->addButton(QDialogButtonBox::Close);
     unblockButton->setEnabled(false);
     connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
@@ -2768,7 +2768,7 @@ void MainWindow::showBlacklistDialog()
             item->setData(Qt::UserRole, userId);
         }
         if (listWidget->count() == 0) {
-            listWidget->addItem(QStringLiteral("黑名单为空"));
+            listWidget->addItem(UiText::MainWindow::kBlacklistEmptyItem);
         }
     });
 
@@ -2804,15 +2804,15 @@ void MainWindow::inviteMembersToCurrentConversation()
 
     const Conversation *conversation = m_chatStore->currentConversation();
     if (!conversation || conversation->type != QStringLiteral("group")) {
-        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
 
     bool accepted = false;
     const QString emailText = QInputDialog::getText(
         this,
-        QStringLiteral("邀请成员"),
-        QStringLiteral("输入要邀请的邮箱（多个用逗号分隔）"),
+        UiText::MainWindow::kDialogInviteMembers,
+        UiText::MainWindow::kInviteEmailPrompt,
         QLineEdit::Normal,
         QString(),
         &accepted).trimmed();
@@ -2846,12 +2846,12 @@ void MainWindow::removeMemberFromCurrentConversation()
 
     const Conversation *conversation = m_chatStore->currentConversation();
     if (!conversation || conversation->type != QStringLiteral("group")) {
-        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
 
     if (m_currentConversationMembers.isEmpty()) {
-        setNetworkStatus(QStringLiteral("暂无成员信息"));
+        setNetworkStatus(UiText::MainWindow::kNoMemberInfo);
         return;
     }
 
@@ -2867,15 +2867,15 @@ void MainWindow::removeMemberFromCurrentConversation()
     }
 
     if (emails.isEmpty()) {
-        setNetworkStatus(QStringLiteral("没有可移除的成员"));
+        setNetworkStatus(UiText::MainWindow::kNoRemovableMembers);
         return;
     }
 
     bool ok = false;
     const QString selected = QInputDialog::getItem(
         this,
-        QStringLiteral("移除成员"),
-        QStringLiteral("选择要移除的成员"),
+        UiText::MainWindow::kDialogRemoveMember,
+        UiText::MainWindow::kSelectMemberToRemove,
         emails,
         0,
         false,
@@ -2892,8 +2892,8 @@ void MainWindow::removeMemberFromCurrentConversation()
 
     const QString memberEmail = emailList.at(index);
     auto *msgBox = new QMessageBox(this);
-    msgBox->setWindowTitle(QStringLiteral("确认移除"));
-    msgBox->setText(QStringLiteral("确定要将 %1 移出群聊吗？").arg(memberEmail));
+    msgBox->setWindowTitle(UiText::MainWindow::kConfirmRemoveTitle);
+    msgBox->setText(UiText::MainWindow::kConfirmRemoveMemberPattern.arg(memberEmail));
     msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox->setDefaultButton(QMessageBox::No);
     if (msgBox->exec() == QMessageBox::Yes) {
@@ -2906,12 +2906,12 @@ void MainWindow::showMembersDialog()
 {
     const Conversation *conversation = m_chatStore->currentConversation();
     if (!conversation || conversation->type != QStringLiteral("group")) {
-        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
 
     QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("群成员 - %1").arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
+    dialog.setWindowTitle(UiText::MainWindow::kGroupMembersTitlePattern.arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
     dialog.resize(420, 380);
 
     auto *layout = new QVBoxLayout(&dialog);
@@ -2925,15 +2925,15 @@ void MainWindow::showMembersDialog()
         const QString displayName = member.nickname.trimmed().isEmpty()
             ? member.email : member.nickname;
         QString suffix;
-        if (member.isOwner) suffix += QStringLiteral(" [群主]");
-        if (member.isSelf) suffix += QStringLiteral(" (我)");
-        const QString statusText = member.isOnline ? QStringLiteral(" 在线") : QStringLiteral(" 离线");
+        if (member.isOwner) suffix += UiText::MainWindow::kOwnerTag;
+        if (member.isSelf) suffix += UiText::MainWindow::kSelfTagShort;
+        const QString statusText = member.isOnline ? UiText::MainWindow::kOnlineSuffix : UiText::MainWindow::kOfflineSuffix;
         auto *item = new QListWidgetItem(displayName + suffix + statusText, listWidget);
         item->setForeground(member.isOnline ? QColor("#059669") : QColor("#9ca3af"));
     }
 
     if (listWidget->count() == 0) {
-        listWidget->addItem(QStringLiteral("暂无成员信息"));
+        listWidget->addItem(UiText::MainWindow::kNoMemberInfo);
     }
 
     layout->addWidget(listWidget, 1);
@@ -2954,14 +2954,14 @@ void MainWindow::leaveCurrentConversation()
     }
 
     if (conversation->type != QStringLiteral("group")) {
-        setNetworkStatus(QStringLiteral("当前不是群聊"));
+        setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
 
     const auto decision = QMessageBox::question(
         this,
-        QStringLiteral("退出群聊"),
-        QStringLiteral("确定要退出「%1」吗？").arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
+        UiText::MainWindow::kDialogLeaveGroup,
+        UiText::MainWindow::kLeaveGroupConfirmPattern.arg(conversation->name.isEmpty() ? conversation->id : conversation->name));
 
     if (decision != QMessageBox::Yes) {
         return;
@@ -2980,8 +2980,8 @@ void MainWindow::deleteCurrentConversation()
     const QString name = conversation->name.isEmpty() ? conversation->id : conversation->name;
     const auto decision = QMessageBox::question(
         this,
-        QStringLiteral("删除会话"),
-        QStringLiteral("确定要删除「%1」吗？").arg(name));
+        UiText::MainWindow::kDeleteConversationTitle,
+        UiText::MainWindow::kDeleteConversationConfirmPattern.arg(name));
 
     if (decision != QMessageBox::Yes) {
         return;
@@ -3098,13 +3098,13 @@ void MainWindow::refreshConversationHeader()
 
     if (m_conversationMetaLabel) {
         const bool isGroup = conversation->type == QStringLiteral("group");
-        const QString typeText = isGroup ? QStringLiteral("群聊") : QStringLiteral("私聊");
+        const QString typeText = isGroup ? UiText::MainWindow::kGroupChatType : UiText::MainWindow::kPrivateChatType;
         QString meta = typeText;
         if (conversation->memberCount > 0) {
-            meta += QStringLiteral(" · %1 人").arg(conversation->memberCount);
+            meta += UiText::MainWindow::kMemberCountMetaPattern.arg(conversation->memberCount);
         }
         if (conversation->onlineCount > 0) {
-            meta += QStringLiteral(" · %1 在线").arg(conversation->onlineCount);
+            meta += UiText::MainWindow::kOnlineCountMetaPattern.arg(conversation->onlineCount);
         }
         m_conversationMetaLabel->setText(meta);
     }
@@ -3209,7 +3209,7 @@ void MainWindow::runGlobalMessageSearch()
         layout->addWidget(resultList, 1);
 
         auto *buttonBox = new QDialogButtonBox(&dialog);
-        QPushButton *locateButton = buttonBox->addButton(QStringLiteral("定位消息"), QDialogButtonBox::ActionRole);
+        QPushButton *locateButton = buttonBox->addButton(UiText::MainWindow::kLocateMessage, QDialogButtonBox::ActionRole);
         buttonBox->addButton(QDialogButtonBox::Close);
         locateButton->setEnabled(false);
 
@@ -3387,7 +3387,7 @@ void MainWindow::startReply(qint64 messageId, const QString &content, const QStr
     m_replyToContent = content;
     m_replyToSender = sender;
 
-    const QString preview = QStringLiteral("回复 %1: %2").arg(sender, content.left(80));
+    const QString preview = UiText::MainWindow::kReplyPreviewPattern.arg(sender, content.left(80));
     m_replyPreviewLabel->setText(preview);
     m_replyBar->setVisible(true);
     m_messageInput->setFocus();

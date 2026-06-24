@@ -80,7 +80,7 @@ QString normalizePreviewText(QString text)
         const QString selfBody = selfMatch.captured(1).trimmed();
         const QString mediaText = formatMediaPreviewText(selfBody);
         const QString normalizedBody = mediaText.isEmpty() ? collapsePreviewWhitespace(selfBody) : mediaText;
-        return QStringLiteral("你: %1").arg(normalizedBody);
+        return UiText::ConversationManager::kYouPrefix.arg(normalizedBody);
     }
 
     const QString mediaText = formatMediaPreviewText(text);
@@ -95,7 +95,7 @@ QString normalizePreviewText(QString text)
 
     if (text.startsWith(UiText::MessageBubble::kSystemPrefix)) {
         const QString systemBody = text.mid(UiText::MessageBubble::kSystemPrefix.size()).trimmed();
-        return QStringLiteral("\u7cfb\u7edf\u6d88\u606f: %1").arg(systemBody);
+        return UiText::MediaUtils::kSystemMessagePreviewPattern.arg(systemBody);
     }
 
     return text;

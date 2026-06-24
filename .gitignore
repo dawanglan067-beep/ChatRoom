@@ -1,5 +1,5 @@
 build/
-build-test9/
+build-*/
 CMakeFiles/
 *.exe
 *.dll
