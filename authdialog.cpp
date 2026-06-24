@@ -1,4 +1,4 @@
-﻿#include "authdialog.h"
+#include "authdialog.h"
 
 #include "authservice.h"
 #include "uitexts.h"
@@ -10,6 +10,29 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QVBoxLayout>
+#include <QRegularExpression>
+
+namespace
+{
+QString normalizeEmail(const QString &input)
+{
+    const QString trimmed = input.trimmed();
+    if (trimmed.isEmpty()) {
+        return QString();
+    }
+
+    static const QRegularExpression qqNumberRegex(QStringLiteral("^\\d{5,12}$"));
+    if (qqNumberRegex.match(trimmed).hasMatch()) {
+        return trimmed + QStringLiteral("@qq.com");
+    }
+
+    if (trimmed.contains(QLatin1Char('@'))) {
+        return trimmed.toLower();
+    }
+
+    return QString();
+}
+}
 
 AuthDialog::AuthDialog(AuthService *authService, QWidget *parent)
     : QDialog(parent)
@@ -32,8 +55,9 @@ void AuthDialog::saveBackendSettings()
         return;
     }
 
+    const QString email = normalizeEmail(m_emailInput->text().trimmed());
     QSettings settings;
-    settings.setValue(QStringLiteral("auth/last_email"), m_emailInput->text().trimmed().toLower());
+    settings.setValue(QStringLiteral("auth/last_email"), email);
     settings.sync();
 
     showStatusMessage(UiText::AuthDialog::kBackendUrlSaved, true);
@@ -47,15 +71,21 @@ void AuthDialog::requestCode()
         return;
     }
 
+    const QString email = normalizeEmail(m_emailInput->text().trimmed());
+    if (email.isEmpty()) {
+        showStatusMessage(UiText::AuthDialog::kEmailPlaceholder, false);
+        return;
+    }
+
     QSettings settings;
-    settings.setValue(QStringLiteral("auth/last_email"), m_emailInput->text().trimmed().toLower());
+    settings.setValue(QStringLiteral("auth/last_email"), email);
     settings.sync();
 
     setBusy(true);
     showStatusMessage(UiText::AuthDialog::kRequestingCode, true);
 
     m_authService->sendVerificationCodeAsync(m_backendUrlInput->text().trimmed(),
-                                             m_emailInput->text().trimmed(),
+                                             email,
                                              [this](const SendCodeResult &result) {
                                                  setBusy(false);
                                                  showStatusMessage(result.message, result.ok);
@@ -70,12 +100,18 @@ void AuthDialog::verifyAndEnter()
         return;
     }
 
+    const QString email = normalizeEmail(m_emailInput->text().trimmed());
+    if (email.isEmpty()) {
+        showStatusMessage(UiText::AuthDialog::kEmailPlaceholder, false);
+        return;
+    }
+
     setBusy(true);
     showStatusMessage(UiText::AuthDialog::kVerifyingCode, true);
 
     m_authService->verifyCodeAndAuthenticateAsync(
         m_backendUrlInput->text().trimmed(),
-        m_emailInput->text().trimmed(),
+        email,
         m_codeInput->text().trimmed(),
         [this](const VerifyAuthResult &result) {
             setBusy(false);
