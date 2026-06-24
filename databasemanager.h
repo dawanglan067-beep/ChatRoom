@@ -26,6 +26,7 @@ public:
     QList<Message> loadMessages(const QString &conversationId, int limit = 200) const;
     void appendMessage(const QString &conversationId, const Message &message);
     void updateMessage(const QString &conversationId, qint64 serverMessageId, const Message &message);
+    void trimOldMessages(int maxMessagesPerConversation = 500);
 
 private:
     bool createTables();

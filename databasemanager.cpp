@@ -235,6 +235,7 @@ void DatabaseManager::saveMessages(const QString &conversationId, const QList<Me
 
     if (ok) {
         db.commit();
+        trimOldMessages();
     } else {
         db.rollback();
     }
@@ -327,5 +328,25 @@ void DatabaseManager::updateMessage(const QString &conversationId, qint64 server
     query.addBindValue(serverMessageId);
     if (!query.exec()) {
         qWarning() << "DatabaseManager::updateMessage failed:" << query.lastError().text();
+    }
+}
+
+void DatabaseManager::trimOldMessages(int maxMessagesPerConversation)
+{
+    QSqlDatabase db = QSqlDatabase::database(m_connectionName);
+    if (!db.isOpen()) {
+        return;
+    }
+
+    QSqlQuery query(db);
+    if (!query.exec(QStringLiteral(
+        "DELETE FROM messages WHERE id IN ("
+        "  SELECT m.id FROM messages m"
+        "  INNER JOIN ("
+        "    SELECT conversation_id, MAX(id) AS max_id FROM messages GROUP BY conversation_id"
+        "  ) latest ON m.conversation_id = latest.conversation_id"
+        "  WHERE m.id < latest.max_id - %1"
+        ")").arg(maxMessagesPerConversation))) {
+        qWarning() << "DatabaseManager::trimOldMessages failed:" << query.lastError().text();
     }
 }
