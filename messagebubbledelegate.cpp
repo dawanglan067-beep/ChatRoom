@@ -585,11 +585,11 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
         painter->drawText(statusRect, Qt::AlignRight | Qt::AlignVCenter, statusText);
     }
 
-    // Draw red exclamation mark for failed messages
+    // Draw red exclamation mark for failed messages - bottom left of bubble
     if (isSelf && deliveryStatus == Message::DeliveryStatus::Failed) {
-        const int iconSize = 20;
-        const QRect iconRect(bubbleRect.right() + 6,
-                             bubbleRect.top() + (bubbleRect.height() - iconSize) / 2,
+        const int iconSize = 18;
+        const QRect iconRect(bubbleRect.left() - iconSize - 4,
+                             bubbleRect.bottom() - iconSize - 2,
                              iconSize, iconSize);
 
         painter->setPen(Qt::NoPen);
@@ -598,7 +598,7 @@ void MessageBubbleDelegate::paint(QPainter *painter, const QStyleOptionViewItem 
 
         painter->setPen(QColor(255, 255, 255));
         QFont iconFont = painter->font();
-        iconFont.setPointSizeF(12);
+        iconFont.setPointSizeF(11);
         iconFont.setBold(true);
         painter->setFont(iconFont);
         painter->drawText(iconRect, Qt::AlignCenter, QStringLiteral("!"));
