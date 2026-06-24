@@ -14,6 +14,7 @@ const http = require('http');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const WebSocket = require('ws');
 const { WebSocketServer } = WebSocket;
 const { createMigrations } = require('./migrations');
@@ -141,6 +142,17 @@ function normalizeAvatarUrl(value) {
 async function sendVerificationEmail(email, code) {
   if (config.mailMode === 'log') {
     console.log(`[mail-log] verification code for ${email}: ${code}`);
+    return;
+  }
+
+  if (config.mailMode === 'resend') {
+    const resend = new Resend(config.resendApiKey);
+    await resend.emails.send({
+      from: config.resendFromEmail || 'onboarding@resend.dev',
+      to: email,
+      subject: 'ChatRoom 验证码',
+      html: `<p>您的 ChatRoom 验证码是：<strong>${code}</strong></p><p>验证码 5 分钟内有效。</p>`
+    });
     return;
   }
 
