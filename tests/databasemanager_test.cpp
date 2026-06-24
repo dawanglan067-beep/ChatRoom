@@ -47,14 +47,14 @@ void DatabaseManagerTest::saveAndLoadConversations()
 {
     QList<Conversation> conversations;
     Conversation conv1(QStringLiteral("c-1"), QStringLiteral("Conversation 1"));
-    conv1.type = QStringLiteral("direct");
+    conv1.type = Conversation::Type::Direct;
     conv1.lastMessagePreview = QStringLiteral("Hello");
     conv1.lastMessageTimestamp = 1000;
     conv1.unreadCount = 3;
     conversations.append(conv1);
 
     Conversation conv2(QStringLiteral("c-2"), QStringLiteral("Conversation 2"));
-    conv2.type = QStringLiteral("group");
+    conv2.type = Conversation::Type::Group;
     conv2.memberCount = 5;
     conv2.onlineCount = 2;
     conversations.append(conv2);
@@ -65,7 +65,7 @@ void DatabaseManagerTest::saveAndLoadConversations()
     QCOMPARE(loaded.size(), 2);
     QCOMPARE(loaded.at(0).id, QStringLiteral("c-1"));
     QCOMPARE(loaded.at(0).name, QStringLiteral("Conversation 1"));
-    QCOMPARE(loaded.at(0).type, QStringLiteral("direct"));
+    QCOMPARE(loaded.at(0).type, Conversation::Type::Direct);
     QCOMPARE(loaded.at(0).unreadCount, 3);
     QCOMPARE(loaded.at(1).id, QStringLiteral("c-2"));
     QCOMPARE(loaded.at(1).memberCount, 5);

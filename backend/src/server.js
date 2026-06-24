@@ -5,7 +5,6 @@ const path = require('path');
 
 const { config, constants, validateStartupConfig } = require('./config');
 const utils = require('./utils');
-const db = require('./db');
 
 const cors = require('cors');
 const crypto = require('crypto');
