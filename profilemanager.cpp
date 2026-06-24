@@ -404,34 +404,3 @@ void ProfileManager::clearTypingUsersForConversation(const QString &conversation
     m_typingUsersByConversationId.remove(normalizedId);
     emit typingUsersUpdated(normalizedId, QHash<QString, QString>());
 }
-
-void ProfileManager::updateTypingStatusLabel()
-{
-    const QString conversationId = m_typingConversationId.trimmed();
-    if (conversationId.isEmpty()) {
-        emit typingStatusLabelUpdated(QString(), false);
-        return;
-    }
-
-    const QHash<QString, QString> typingUsers = m_typingUsersByConversationId.value(conversationId);
-    if (typingUsers.isEmpty()) {
-        emit typingStatusLabelUpdated(QString(), false);
-        return;
-    }
-
-    QStringList names;
-    for (auto it = typingUsers.constBegin(); it != typingUsers.constEnd(); ++it) {
-        names.append(it.value().isEmpty() ? it.key() : it.value());
-    }
-    names.removeAll(QString());
-    if (names.isEmpty()) {
-        emit typingStatusLabelUpdated(QString(), false);
-        return;
-    }
-
-    names.sort();
-    const QString text = names.size() == 1
-        ? UiText::ProfileManager::kTypingSinglePattern.arg(names.first())
-        : UiText::ProfileManager::kTypingMultiplePattern.arg(names.first());
-    emit typingStatusLabelUpdated(text, true);
-}

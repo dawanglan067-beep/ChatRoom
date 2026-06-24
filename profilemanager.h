@@ -35,7 +35,6 @@ public:
     void scheduleTypingStateUpdate(const QString &conversationId, bool shouldBeTyping);
     void sendTypingState(const QString &conversationId, bool isTyping);
     void clearTypingUsersForConversation(const QString &conversationId);
-    void updateTypingStatusLabel();
 
     QString currentUserEmail() const;
     QString currentUserNickname() const;
@@ -51,7 +50,6 @@ signals:
     void blacklistLoaded(const QJsonObject &blockedUsers);
     void networkStatusChanged(const QString &status, const QString &detail = QString());
     void typingUsersUpdated(const QString &conversationId, const QHash<QString, QString> &users);
-    void typingStatusLabelUpdated(const QString &text, bool visible);
 
 private:
     NetworkService *m_networkService = nullptr;
