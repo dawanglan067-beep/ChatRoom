@@ -2782,6 +2782,39 @@ void MainWindow::handleMessageActivated(const QModelIndex &index)
         return;
     }
 
+    // Check if this is a failed message - show retry dialog
+    const bool isSelf = index.data(MessageListModel::IsSelfRole).toBool();
+    if (isSelf) {
+        const int status = index.data(MessageListModel::DeliveryStatusRole).toInt();
+        if (status == static_cast<int>(Message::DeliveryStatus::Failed)) {
+            const QString content = index.data(MessageListModel::ContentRole).toString();
+            const QString preview = content.length() > 50 ? content.left(50) + QStringLiteral("...") : content;
+
+            const auto decision = QMessageBox::question(
+                this,
+                QStringLiteral("消息发送失败"),
+                QStringLiteral("发送失败的消息：\n\"%1\"\n\n是否重新发送？").arg(preview),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::Yes);
+
+            if (decision == QMessageBox::Yes) {
+                const QString conversationId = currentRoomId();
+                if (!conversationId.isEmpty()) {
+                    // Get the message from store and resend
+                    const int row = index.row();
+                    const Message *msg = m_chatStore->messageAt(row);
+                    if (msg && !msg->clientMessageId.isEmpty()) {
+                        m_chatStore->markMessageSending(conversationId, msg->clientMessageId);
+                        m_chatClient->sendChatMessage(content, conversationId, msg->clientMessageId);
+                        m_messageHandler->restartPendingMessageTimeout(conversationId, msg->clientMessageId);
+                        setNetworkStatus(QStringLiteral("状态：正在重发消息"));
+                    }
+                }
+            }
+            return;
+        }
+    }
+
     const QString content = index.data(MessageListModel::ContentRole).toString();
     QString fileName;
     QString rawUrl;
