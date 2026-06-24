@@ -112,4 +112,24 @@ if(BUILD_TESTING)
     target_include_directories(ChatRoomUnitTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
     add_test(NAME ChatRoomUnitTests COMMAND ChatRoomUnitTests)
+
+    qt_add_executable(MediaUtilsTests
+        tests/mediautils_test.cpp
+        mediautils.cpp
+        mediautils.h
+    )
+    target_link_libraries(MediaUtilsTests PRIVATE Qt::Core Qt::Test)
+    target_include_directories(MediaUtilsTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test(NAME MediaUtilsTests COMMAND MediaUtilsTests)
+
+    qt_add_executable(DatabaseManagerTests
+        tests/databasemanager_test.cpp
+        databasemanager.cpp
+        databasemanager.h
+        conversation.h
+        message.h
+    )
+    target_link_libraries(DatabaseManagerTests PRIVATE Qt::Core Qt::Test Qt::Sql)
+    target_include_directories(DatabaseManagerTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test(NAME DatabaseManagerTests COMMAND DatabaseManagerTests)
 endif()
