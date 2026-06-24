@@ -218,15 +218,20 @@ void DatabaseManager::saveMessages(const QString &conversationId, const QList<Me
 
     bool ok = true;
     for (const Message &msg : messages) {
+        Message corrected = msg;
+        // Fix: if message has serverMessageId, it was already delivered
+        if (corrected.serverMessageId > 0 && corrected.status == Message::DeliveryStatus::Sending) {
+            corrected.status = Message::DeliveryStatus::Delivered;
+        }
         query.addBindValue(conversationId);
-        query.addBindValue(msg.serverMessageId);
-        query.addBindValue(msg.clientMessageId);
-        query.addBindValue(msg.content);
-        query.addBindValue(msg.senderId);
-        query.addBindValue(msg.isSelf ? 1 : 0);
-        query.addBindValue(msg.timestamp);
-        query.addBindValue(static_cast<int>(msg.status));
-        query.addBindValue(msg.senderAvatarUrl);
+        query.addBindValue(corrected.serverMessageId);
+        query.addBindValue(corrected.clientMessageId);
+        query.addBindValue(corrected.content);
+        query.addBindValue(corrected.senderId);
+        query.addBindValue(corrected.isSelf ? 1 : 0);
+        query.addBindValue(corrected.timestamp);
+        query.addBindValue(static_cast<int>(corrected.status));
+        query.addBindValue(corrected.senderAvatarUrl);
         if (!query.exec()) {
             ok = false;
             break;
@@ -299,15 +304,20 @@ void DatabaseManager::appendMessage(const QString &conversationId, const Message
         "INSERT OR REPLACE INTO messages "
         "(conversation_id, server_message_id, client_message_id, content, sender_id, is_self, timestamp, status, sender_avatar_url) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+    // Fix: if message has serverMessageId, it was already delivered
+    Message corrected = message;
+    if (corrected.serverMessageId > 0 && corrected.status == Message::DeliveryStatus::Sending) {
+        corrected.status = Message::DeliveryStatus::Delivered;
+    }
     query.addBindValue(conversationId);
-    query.addBindValue(message.serverMessageId);
-    query.addBindValue(message.clientMessageId);
-    query.addBindValue(message.content);
-    query.addBindValue(message.senderId);
-    query.addBindValue(message.isSelf ? 1 : 0);
-    query.addBindValue(message.timestamp);
-    query.addBindValue(static_cast<int>(message.status));
-    query.addBindValue(message.senderAvatarUrl);
+    query.addBindValue(corrected.serverMessageId);
+    query.addBindValue(corrected.clientMessageId);
+    query.addBindValue(corrected.content);
+    query.addBindValue(corrected.senderId);
+    query.addBindValue(corrected.isSelf ? 1 : 0);
+    query.addBindValue(corrected.timestamp);
+    query.addBindValue(static_cast<int>(corrected.status));
+    query.addBindValue(corrected.senderAvatarUrl);
     if (!query.exec()) {
         qWarning() << "DatabaseManager::appendMessage failed:" << query.lastError().text();
     }
