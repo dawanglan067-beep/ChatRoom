@@ -34,13 +34,30 @@ public:
 
     void saveDraft(const QString &conversationId, const QString &draftText);
     void restoreDraft(const QString &conversationId);
-    void loadDraftsFromSettings();
+    void loadDraftsFromSettings(const QString &loggedInEmail = QString());
     void persistDraftsToSettings() const;
 
-    void toggleFavorite(const QString &conversationId, qint64 messageId);
+    void toggleFavoriteRich(const QString &conversationId, const QString &conversationName,
+                            qint64 serverMessageId, const QString &content,
+                            const QString &senderId, qint64 timestamp);
+    bool removeFavorite(const QString &conversationId, qint64 serverMessageId);
     void loadFavoritesFromSettings();
     void persistFavoritesToSettings() const;
-    bool isFavoriteMessage(const QString &conversationId, qint64 messageId) const;
+    bool isFavoriteMessage(const QString &conversationId, qint64 serverMessageId) const;
+    QList<QJsonObject> allFavoriteMessages() const;
+    static QString favoriteKey(const QString &conversationId, qint64 serverMessageId);
+
+    void addPendingConversationMapping(const QString &clientMessageId, const QString &conversationId);
+    void removePendingConversationMapping(const QString &clientMessageId);
+    QStringList allPendingClientMessageIds() const;
+    QString pendingConversationId(const QString &clientMessageId) const;
+
+    void updateLastReadAck(const QString &conversationId, qint64 serverMessageId);
+    qint64 lastReadAck(const QString &conversationId) const;
+
+    QHash<QString, QString> typingUsersForConversation(const QString &conversationId) const;
+    void clearTypingUsers();
+    void clearTypingUsersForConversation(const QString &conversationId);
 
     void editMessage(const QString &conversationId, qint64 messageId, const QString &newContent);
     void focusMessageByServerIdInConversation(const QString &conversationId, qint64 serverMessageId);

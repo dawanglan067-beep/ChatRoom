@@ -8,6 +8,7 @@
 #include "networkservice.h"
 #include "uitexts.h"
 
+#include <QDateTime>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -344,7 +345,7 @@ void MessageHandler::restoreDraft(const QString &conversationId)
     emit networkStatusChanged(QStringLiteral("draft_restored"), draft);
 }
 
-void MessageHandler::loadDraftsFromSettings()
+void MessageHandler::loadDraftsFromSettings(const QString &loggedInEmail)
 {
     QSettings settings;
     const QStringList keys = settings.childGroups();
@@ -356,6 +357,36 @@ void MessageHandler::loadDraftsFromSettings()
                 m_conversationDrafts.insert(conversationId, draft);
             }
         }
+    }
+
+    const QString email = loggedInEmail.trimmed().isEmpty()
+        ? m_loggedInEmail.trimmed().toLower()
+        : loggedInEmail.trimmed().toLower();
+    if (email.isEmpty()) {
+        return;
+    }
+
+    QSettings clientSettings(QStringLiteral("ChatRoom"), QStringLiteral("ChatRoomClient"));
+    const QString emailKey = QStringLiteral("drafts/%1").arg(email);
+    const QByteArray raw = clientSettings.value(emailKey).toByteArray();
+    if (raw.isEmpty()) {
+        return;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(raw, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return;
+    }
+
+    const QJsonObject object = document.object();
+    for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
+        const QString conversationId = it.key().trimmed();
+        const QString draft = it.value().toString();
+        if (conversationId.isEmpty() || draft.trimmed().isEmpty()) {
+            continue;
+        }
+        m_conversationDrafts.insert(conversationId, draft);
     }
 }
 
@@ -369,58 +400,167 @@ void MessageHandler::persistDraftsToSettings() const
     settings.sync();
 }
 
-void MessageHandler::toggleFavorite(const QString &conversationId, qint64 messageId)
+void MessageHandler::toggleFavoriteRich(const QString &conversationId, const QString &conversationName,
+                                        qint64 serverMessageId, const QString &content,
+                                        const QString &senderId, qint64 timestamp)
 {
-    if (conversationId.isEmpty() || messageId <= 0) {
+    if (conversationId.isEmpty() || serverMessageId <= 0) {
         return;
     }
 
-    const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(messageId);
+    const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
     if (m_favoriteMessagesByKey.contains(key)) {
-        m_favoriteMessagesByKey.remove(key);
-    } else {
-        m_favoriteMessagesByKey.insert(key, QJsonObject{
-            {QStringLiteral("conversationId"), conversationId},
-            {QStringLiteral("messageId"), messageId}
-        });
+        return;
     }
+
+    QJsonObject object;
+    object.insert(QStringLiteral("conversationId"), conversationId);
+    object.insert(QStringLiteral("conversationName"), conversationName);
+    object.insert(QStringLiteral("serverMessageId"), serverMessageId);
+    object.insert(QStringLiteral("content"), content);
+    object.insert(QStringLiteral("senderId"), senderId);
+    object.insert(QStringLiteral("timestamp"), QString::number(timestamp));
+    object.insert(QStringLiteral("favoritedAt"), QString::number(QDateTime::currentMSecsSinceEpoch()));
+    m_favoriteMessagesByKey.insert(key, object);
+    persistFavoritesToSettings();
+}
+
+bool MessageHandler::removeFavorite(const QString &conversationId, qint64 serverMessageId)
+{
+    if (conversationId.isEmpty() || serverMessageId <= 0) {
+        return false;
+    }
+
+    const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
+    if (!m_favoriteMessagesByKey.contains(key)) {
+        return false;
+    }
+
+    m_favoriteMessagesByKey.remove(key);
+    persistFavoritesToSettings();
+    return true;
 }
 
 void MessageHandler::loadFavoritesFromSettings()
 {
-    QSettings settings;
-    const QStringList keys = settings.childGroups();
-    for (const QString &key : keys) {
-        if (key.startsWith(QStringLiteral("favorites/"))) {
-            const QString favoriteKey = key.mid(10);
-            const QJsonObject favorite = QJsonObject{
-                {QStringLiteral("conversationId"), settings.value(key + QStringLiteral("/conversationId")).toString()},
-                {QStringLiteral("messageId"), settings.value(key + QStringLiteral("/messageId")).toLongLong()}
-            };
-            m_favoriteMessagesByKey.insert(favoriteKey, favorite);
+    QSettings settings(QStringLiteral("ChatRoom"), QStringLiteral("ChatRoomClient"));
+    const QByteArray raw = settings.value(QStringLiteral("favoriteMessages")).toByteArray();
+    if (raw.isEmpty()) {
+        return;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(raw, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isArray()) {
+        return;
+    }
+
+    m_favoriteMessagesByKey.clear();
+    const QJsonArray array = document.array();
+    for (const QJsonValue &value : array) {
+        if (!value.isObject()) {
+            continue;
         }
+        const QJsonObject obj = value.toObject();
+        const QString conversationId = obj.value(QStringLiteral("conversationId")).toString();
+        const qint64 serverMessageId = obj.value(QStringLiteral("serverMessageId")).toInteger();
+        if (conversationId.isEmpty() || serverMessageId <= 0) {
+            continue;
+        }
+        const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
+        m_favoriteMessagesByKey.insert(key, obj);
     }
 }
 
 void MessageHandler::persistFavoritesToSettings() const
 {
-    QSettings settings;
+    QJsonArray array;
     for (auto it = m_favoriteMessagesByKey.constBegin(); it != m_favoriteMessagesByKey.constEnd(); ++it) {
-        const QString key = QStringLiteral("favorites/") + it.key();
-        settings.setValue(key + QStringLiteral("/conversationId"), it.value().value(QStringLiteral("conversationId")).toString());
-        settings.setValue(key + QStringLiteral("/messageId"), it.value().value(QStringLiteral("messageId")).toInteger());
+        array.append(it.value());
     }
+
+    QSettings settings(QStringLiteral("ChatRoom"), QStringLiteral("ChatRoomClient"));
+    settings.setValue(QStringLiteral("favoriteMessages"),
+                      QJsonDocument(array).toJson(QJsonDocument::Compact));
     settings.sync();
 }
 
-bool MessageHandler::isFavoriteMessage(const QString &conversationId, qint64 messageId) const
+bool MessageHandler::isFavoriteMessage(const QString &conversationId, qint64 serverMessageId) const
 {
-    if (conversationId.isEmpty() || messageId <= 0) {
+    if (conversationId.isEmpty() || serverMessageId <= 0) {
         return false;
     }
 
-    const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(messageId);
+    const QString key = QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
     return m_favoriteMessagesByKey.contains(key);
+}
+
+QList<QJsonObject> MessageHandler::allFavoriteMessages() const
+{
+    return m_favoriteMessagesByKey.values();
+}
+
+QString MessageHandler::favoriteKey(const QString &conversationId, qint64 serverMessageId)
+{
+    return QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
+}
+
+void MessageHandler::addPendingConversationMapping(const QString &clientMessageId, const QString &conversationId)
+{
+    if (!clientMessageId.isEmpty() && !conversationId.isEmpty()) {
+        m_pendingMessageConversationIds.insert(clientMessageId, conversationId);
+    }
+}
+
+void MessageHandler::removePendingConversationMapping(const QString &clientMessageId)
+{
+    if (!clientMessageId.isEmpty()) {
+        m_pendingMessageConversationIds.remove(clientMessageId);
+    }
+}
+
+QStringList MessageHandler::allPendingClientMessageIds() const
+{
+    return m_pendingMessageConversationIds.keys();
+}
+
+QString MessageHandler::pendingConversationId(const QString &clientMessageId) const
+{
+    return m_pendingMessageConversationIds.value(clientMessageId);
+}
+
+void MessageHandler::updateLastReadAck(const QString &conversationId, qint64 serverMessageId)
+{
+    if (conversationId.isEmpty() || serverMessageId <= 0) {
+        return;
+    }
+    const qint64 currentAck = m_lastReadAckMessageIds.value(conversationId, 0);
+    if (serverMessageId > currentAck) {
+        m_lastReadAckMessageIds.insert(conversationId, serverMessageId);
+    }
+}
+
+qint64 MessageHandler::lastReadAck(const QString &conversationId) const
+{
+    return m_lastReadAckMessageIds.value(conversationId, 0);
+}
+
+QHash<QString, QString> MessageHandler::typingUsersForConversation(const QString &conversationId) const
+{
+    return m_typingUsersByConversationId.value(conversationId);
+}
+
+void MessageHandler::clearTypingUsers()
+{
+    m_typingUsersByConversationId.clear();
+}
+
+void MessageHandler::clearTypingUsersForConversation(const QString &conversationId)
+{
+    if (!conversationId.isEmpty()) {
+        m_typingUsersByConversationId.remove(conversationId);
+        emit typingUsersUpdated(conversationId, QHash<QString, QString>());
+    }
 }
 
 void MessageHandler::editMessage(const QString &conversationId, qint64 messageId, const QString &newContent)

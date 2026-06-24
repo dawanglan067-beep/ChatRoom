@@ -121,14 +121,11 @@ private:
     void saveDraftForConversation(const QString &conversationId, const QString &draftText);
     void restoreDraftForConversation(const QString &conversationId);
     void loadDraftsFromSettings();
-    void persistDraftsToSettings() const;
     void toggleFavoriteForMessageIndex(const QModelIndex &index);
     void recallMessageByIndex(const QModelIndex &index);
     void openMediaLinkByIndex(const QModelIndex &index);
     bool isFavoriteMessage(const QString &conversationId, qint64 serverMessageId) const;
     void showFavoriteMessagesDialog();
-    void loadFavoritesFromSettings();
-    void persistFavoritesToSettings() const;
     void scheduleTypingStateUpdate();
     void sendTypingState(bool isTyping);
     void updateTypingStatusLabel();
@@ -159,12 +156,8 @@ private:
     QString m_currentGroupOwnerName;
     bool m_currentUserOwnsCurrentGroup = false;
     QList<GroupMemberInfo> m_currentConversationMembers;
-    QHash<QString, QString> m_pendingMessageConversationIds;
     QHash<QString, MessagePaginationState> m_messagePaginationStates;
-    QHash<QString, qint64> m_lastReadAckMessageIds;
     QHash<QString, qint64> m_pendingMessageFocusByConversationId;
-    QHash<QString, QJsonObject> m_favoriteMessagesByKey;
-    QHash<QString, QHash<QString, QString>> m_typingUsersByConversationId;
     QTimer *m_typingStopTimer = nullptr;
     QTimer *m_presenceRefreshTimer = nullptr;
     QSet<qint64> m_loadingMediaThumbnailIds;

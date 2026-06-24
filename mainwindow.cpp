@@ -112,11 +112,6 @@ bool canRecallMessageLocally(const QModelIndex &index)
     return (nowMs - timestamp) <= kMessageRecallWindowMs;
 }
 
-QString favoriteMessageKey(const QString &conversationId, qint64 serverMessageId)
-{
-    return QStringLiteral("%1#%2").arg(conversationId).arg(serverMessageId);
-}
-
 void showImagePreviewDialog(QWidget *parent, const QString &fileName, const QPixmap &pixmap, const QString &localPath)
 {
     if (pixmap.isNull()) {
@@ -195,7 +190,7 @@ void MainWindow::setAuthSession(const QString &backendBaseUrl, const QString &au
     m_loggedInUserNickname = settings.value(QStringLiteral("auth/user_nickname")).toString().trimmed();
     m_loggedInUserAvatarUrl = settings.value(QStringLiteral("auth/user_avatar_url")).toString().trimmed();
     loadDraftsFromSettings();
-    loadFavoritesFromSettings();
+    m_messageHandler->loadFavoritesFromSettings();
 
     if (!m_backendBaseUrl.isEmpty()) {
         QUrl wsUrl = QUrl::fromUserInput(m_backendBaseUrl);
@@ -266,7 +261,7 @@ void MainWindow::sendCurrentMessage()
     if (!m_chatStore->addPendingMessageToCurrentChat(displayContent, clientMessageId)) {
         return;
     }
-    m_pendingMessageConversationIds.insert(clientMessageId, conversationId);
+    m_messageHandler->addPendingConversationMapping(clientMessageId, conversationId);
 
     if (!m_chatClient->isConnected()) {
         m_chatStore->markMessageQueued(conversationId, clientMessageId);
@@ -522,48 +517,12 @@ void MainWindow::restoreDraftForConversation(const QString &conversationId)
 
 void MainWindow::loadDraftsFromSettings()
 {
-    m_messageHandler->loadDraftsFromSettings();
-
-    if (m_loggedInUserEmail.trimmed().isEmpty()) {
-        return;
-    }
-
-    QSettings settings(QStringLiteral("ChatRoom"), QStringLiteral("ChatRoomClient"));
-    const QString key = QStringLiteral("drafts/%1").arg(m_loggedInUserEmail.trimmed().toLower());
-    const QByteArray raw = settings.value(key).toByteArray();
-    if (raw.isEmpty()) {
-        return;
-    }
-
-    QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(raw, &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return;
-    }
-
-    const QJsonObject object = document.object();
-    for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
-        const QString conversationId = it.key().trimmed();
-        const QString draft = it.value().toString();
-        if (conversationId.isEmpty() || draft.trimmed().isEmpty()) {
-            continue;
-        }
-        m_messageHandler->saveDraft(conversationId, draft);
-        m_chatStore->setConversationDraft(conversationId, draft);
-    }
-}
-
-void MainWindow::persistDraftsToSettings() const
-{
-    m_messageHandler->persistDraftsToSettings();
+    m_messageHandler->loadDraftsFromSettings(m_loggedInUserEmail);
 }
 
 bool MainWindow::isFavoriteMessage(const QString &conversationId, qint64 serverMessageId) const
 {
-    if (conversationId.trimmed().isEmpty() || serverMessageId <= 0) {
-        return false;
-    }
-    return m_favoriteMessagesByKey.contains(favoriteMessageKey(conversationId, serverMessageId));
+    return m_messageHandler->isFavoriteMessage(conversationId, serverMessageId);
 }
 
 void MainWindow::toggleFavoriteForMessageIndex(const QModelIndex &index)
@@ -583,26 +542,19 @@ void MainWindow::toggleFavoriteForMessageIndex(const QModelIndex &index)
         return;
     }
 
-    const QString key = favoriteMessageKey(conversationId, serverMessageId);
-    if (m_favoriteMessagesByKey.contains(key)) {
-        m_favoriteMessagesByKey.remove(key);
-        persistFavoritesToSettings();
+    if (m_messageHandler->isFavoriteMessage(conversationId, serverMessageId)) {
+        m_messageHandler->removeFavorite(conversationId, serverMessageId);
         m_messageHandler->refreshFavoriteHighlights();
         setNetworkStatus(UiText::MainWindow::kStatusFavoriteRemoved,
                          UiText::MainWindow::kMessageIdPattern.arg(serverMessageId));
         return;
     }
 
-    QJsonObject object;
-    object.insert(QStringLiteral("conversationId"), conversationId);
-    object.insert(QStringLiteral("conversationName"), conversation->name);
-    object.insert(QStringLiteral("serverMessageId"), serverMessageId);
-    object.insert(QStringLiteral("content"), index.data(MessageListModel::ContentRole).toString());
-    object.insert(QStringLiteral("senderId"), index.data(MessageListModel::SenderIdRole).toString());
-    object.insert(QStringLiteral("timestamp"), QString::number(index.data(MessageListModel::TimestampRole).toLongLong()));
-    object.insert(QStringLiteral("favoritedAt"), QString::number(QDateTime::currentMSecsSinceEpoch()));
-    m_favoriteMessagesByKey.insert(key, object);
-    persistFavoritesToSettings();
+    m_messageHandler->toggleFavoriteRich(
+        conversationId, conversation->name, serverMessageId,
+        index.data(MessageListModel::ContentRole).toString(),
+        index.data(MessageListModel::SenderIdRole).toString(),
+        index.data(MessageListModel::TimestampRole).toLongLong());
     m_messageHandler->refreshFavoriteHighlights();
     setNetworkStatus(UiText::MainWindow::kStatusFavorited,
                      UiText::MainWindow::kMessageIdPattern.arg(serverMessageId));
@@ -946,6 +898,7 @@ void MainWindow::sendTypingState(bool isTyping)
 
 void MainWindow::clearTypingUsersForConversation(const QString &conversationId)
 {
+    m_messageHandler->clearTypingUsersForConversation(conversationId);
     m_profileManager->clearTypingUsersForConversation(conversationId);
 }
 
@@ -956,7 +909,7 @@ void MainWindow::updateTypingStatusLabel()
     }
 
     const QString conversationId = currentRoomId().trimmed();
-    const QHash<QString, QString> typingUsers = m_typingUsersByConversationId.value(conversationId);
+    const QHash<QString, QString> typingUsers = m_messageHandler->typingUsersForConversation(conversationId);
     if (typingUsers.isEmpty()) {
         m_typingStatusLabel->clear();
         m_typingStatusLabel->setVisible(false);
@@ -990,12 +943,11 @@ void MainWindow::updateTypingStatusLabel()
 
 void MainWindow::showFavoriteMessagesDialog()
 {
-    if (m_favoriteMessagesByKey.isEmpty()) {
+    QList<QJsonObject> items = m_messageHandler->allFavoriteMessages();
+    if (items.isEmpty()) {
         QMessageBox::information(this, UiText::MainWindow::kFavorites, UiText::MainWindow::kNoFavorites);
         return;
     }
-
-    QList<QJsonObject> items = m_favoriteMessagesByKey.values();
     std::sort(items.begin(), items.end(), [](const QJsonObject &a, const QJsonObject &b) {
         return a.value(QStringLiteral("favoritedAt")).toString().toLongLong()
             > b.value(QStringLiteral("favoritedAt")).toString().toLongLong();
@@ -1057,13 +1009,10 @@ void MainWindow::showFavoriteMessagesDialog()
 
         const QString conversationId = item->data(Qt::UserRole).toString();
         const qint64 messageId = item->data(Qt::UserRole + 1).toLongLong();
-        const QString key = favoriteMessageKey(conversationId, messageId);
-        if (!m_favoriteMessagesByKey.contains(key)) {
+        if (!m_messageHandler->removeFavorite(conversationId, messageId)) {
             return;
         }
 
-        m_favoriteMessagesByKey.remove(key);
-        persistFavoritesToSettings();
         m_messageHandler->refreshFavoriteHighlights();
         delete listWidget->takeItem(listWidget->row(item));
     });
@@ -1097,16 +1046,6 @@ void MainWindow::showFavoriteMessagesDialog()
     layout->addWidget(buttonBox);
 
     dialog.exec();
-}
-
-void MainWindow::loadFavoritesFromSettings()
-{
-    m_messageHandler->loadFavoritesFromSettings();
-}
-
-void MainWindow::persistFavoritesToSettings() const
-{
-    m_messageHandler->persistFavoritesToSettings();
 }
 
 void MainWindow::refreshNetworkUi()
@@ -1237,7 +1176,7 @@ void MainWindow::showQueuedMessagesDialog()
                 continue;
             }
 
-            m_pendingMessageConversationIds.insert(item.clientMessageId, item.conversationId);
+            m_messageHandler->addPendingConversationMapping(item.clientMessageId, item.conversationId);
             if (connected && m_chatStore->markMessageSending(item.conversationId, item.clientMessageId)) {
                 m_messageHandler->restartPendingMessageTimeout(item.conversationId, item.clientMessageId);
             }
@@ -1275,7 +1214,7 @@ void MainWindow::showQueuedMessagesDialog()
         }
 
         m_messageHandler->clearPendingMessageTimeout(clientMessageId);
-        m_pendingMessageConversationIds.remove(clientMessageId);
+        m_messageHandler->removePendingConversationMapping(clientMessageId);
         if (!m_chatStore->removeQueuedMessage(conversationId, clientMessageId)) {
             QMessageBox::warning(this,
                                  UiText::MainWindow::kQueueDetailsDialogTitle,
@@ -1912,7 +1851,7 @@ void MainWindow::setupConnections()
         updateTypingStatusLabel();
     });
     connect(m_chatClient, &ChatClient::disconnected, this, [this]() {
-        m_typingUsersByConversationId.clear();
+        m_messageHandler->clearTypingUsers();
         updateTypingStatusLabel();
         refreshNetworkUi();
     });
@@ -2009,12 +1948,7 @@ void MainWindow::setupConnections()
         }
     });
     connect(m_messageHandler, &MessageHandler::typingUsersUpdated, this,
-        [this](const QString &conversationId, const QHash<QString, QString> &users) {
-            if (users.isEmpty()) {
-                m_typingUsersByConversationId.remove(conversationId);
-            } else {
-                m_typingUsersByConversationId.insert(conversationId, users);
-            }
+        [this](const QString &conversationId, const QHash<QString, QString> &) {
             if (conversationId == currentRoomId()) {
                 updateTypingStatusLabel();
             }
@@ -2026,12 +1960,7 @@ void MainWindow::setupConnections()
         refreshConversationHeader();
     });
     connect(m_profileManager, &ProfileManager::typingUsersUpdated, this,
-        [this](const QString &conversationId, const QHash<QString, QString> &users) {
-            if (users.isEmpty()) {
-                m_typingUsersByConversationId.remove(conversationId);
-            } else {
-                m_typingUsersByConversationId.insert(conversationId, users);
-            }
+        [this](const QString &conversationId, const QHash<QString, QString> &) {
             if (conversationId == currentRoomId()) {
                 updateTypingStatusLabel();
             }
@@ -2058,7 +1987,7 @@ void MainWindow::syncInitialSelection()
 void MainWindow::loadConversationData()
 {
     if (m_backendBaseUrl.isEmpty() || m_authToken.isEmpty()) {
-        m_typingUsersByConversationId.clear();
+        m_messageHandler->clearTypingUsers();
         updateTypingStatusLabel();
         m_loadingMediaThumbnailIds.clear();
         if (m_messageDelegate) {
@@ -2188,10 +2117,7 @@ void MainWindow::loadMessagesForConversation(int index, qint64 beforeId, bool pr
         const qint64 peerLastReadMessageId =
             result.body.value(QStringLiteral("readState")).toObject().value(QStringLiteral("peerLastReadMessageId")).toInteger(0);
         if (serverLastReadMessageId > 0) {
-            const qint64 currentAck = m_lastReadAckMessageIds.value(conversationId, 0);
-            if (serverLastReadMessageId > currentAck) {
-                m_lastReadAckMessageIds.insert(conversationId, serverLastReadMessageId);
-            }
+            m_messageHandler->updateLastReadAck(conversationId, serverLastReadMessageId);
         }
         if (peerLastReadMessageId > 0) {
             m_chatStore->markMessagesReadByPeer(conversationId, peerLastReadMessageId);
