@@ -2796,9 +2796,13 @@ void MainWindow::handleMessageActivated(const QModelIndex &index)
                 QMessageBox::Yes);
 
             if (decision == QMessageBox::Yes) {
+                if (!m_chatClient->isConnected()) {
+                    QMessageBox::warning(this, QStringLiteral("无法重发"),
+                                         QStringLiteral("当前未连接服务器，请先点击\"连接\"后再重试。"));
+                    return;
+                }
                 const QString conversationId = currentRoomId();
                 if (!conversationId.isEmpty()) {
-                    // Get the message from store and resend
                     const int row = index.row();
                     const Message *msg = m_chatStore->messageAt(row);
                     if (msg && !msg->clientMessageId.isEmpty()) {
