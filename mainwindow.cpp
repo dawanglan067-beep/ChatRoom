@@ -2540,7 +2540,7 @@ void MainWindow::inviteMembersToCurrentConversation()
     }
 
     const Conversation *conversation = m_chatStore->currentConversation();
-    if (!conversation || conversation->type != QStringLiteral("group")) {
+    if (!conversation || !conversation->isGroup()) {
         setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
@@ -2582,7 +2582,7 @@ void MainWindow::removeMemberFromCurrentConversation()
     }
 
     const Conversation *conversation = m_chatStore->currentConversation();
-    if (!conversation || conversation->type != QStringLiteral("group")) {
+    if (!conversation || !conversation->isGroup()) {
         setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
@@ -2642,7 +2642,7 @@ void MainWindow::removeMemberFromCurrentConversation()
 void MainWindow::showMembersDialog()
 {
     const Conversation *conversation = m_chatStore->currentConversation();
-    if (!conversation || conversation->type != QStringLiteral("group")) {
+    if (!conversation || !conversation->isGroup()) {
         setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
@@ -2690,7 +2690,7 @@ void MainWindow::leaveCurrentConversation()
         return;
     }
 
-    if (conversation->type != QStringLiteral("group")) {
+    if (!conversation->isGroup()) {
         setNetworkStatus(UiText::MainWindow::kNotGroupChatStatus);
         return;
     }
@@ -2758,7 +2758,7 @@ void MainWindow::onConversationSelected(const QModelIndex &current, const QModel
     m_messageHandler->joinCurrentRoomIfConnected();
 
     const Conversation *conversation = m_chatStore->currentConversation();
-    if (conversation && conversation->type == QStringLiteral("group")) {
+    if (conversation && conversation->isGroup()) {
         loadConversationMembers(row);
     } else {
         if (m_conversationMembersLabel) m_conversationMembersLabel->clear();
@@ -2834,7 +2834,7 @@ void MainWindow::refreshConversationHeader()
     }
 
     if (m_conversationMetaLabel) {
-        const bool isGroup = conversation->type == QStringLiteral("group");
+        const bool isGroup = conversation->isGroup();
         const QString typeText = isGroup ? UiText::MainWindow::kGroupChatType : UiText::MainWindow::kPrivateChatType;
         QString meta = typeText;
         if (conversation->memberCount > 0) {
@@ -2846,7 +2846,7 @@ void MainWindow::refreshConversationHeader()
         m_conversationMetaLabel->setText(meta);
     }
 
-    const bool isGroup = conversation->type == QStringLiteral("group");
+    const bool isGroup = conversation->isGroup();
     if (m_showMembersButton) m_showMembersButton->setVisible(isGroup);
     if (m_inviteMembersButton) m_inviteMembersButton->setVisible(isGroup && m_currentUserOwnsCurrentGroup);
     if (m_removeMemberButton) m_removeMemberButton->setVisible(isGroup && m_currentUserOwnsCurrentGroup);

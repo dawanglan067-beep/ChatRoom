@@ -152,7 +152,7 @@ void DatabaseManager::saveConversations(const QList<Conversation> &conversations
     for (const Conversation &conv : conversations) {
         query.addBindValue(conv.id);
         query.addBindValue(conv.name);
-        query.addBindValue(conv.type);
+        query.addBindValue(Conversation::typeToString(conv.type));
         query.addBindValue(conv.ownerEmail);
         query.addBindValue(conv.lastMessagePreview);
         query.addBindValue(conv.lastMessageTimestamp);
@@ -187,7 +187,7 @@ QList<Conversation> DatabaseManager::loadConversations() const
         Conversation conv;
         conv.id = query.value(0).toString();
         conv.name = query.value(1).toString();
-        conv.type = query.value(2).toString();
+        conv.type = Conversation::typeFromString(query.value(2).toString());
         conv.ownerEmail = query.value(3).toString();
         conv.lastMessagePreview = query.value(4).toString();
         conv.lastMessageTimestamp = query.value(5).toLongLong();

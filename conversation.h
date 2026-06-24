@@ -8,6 +8,11 @@
 class Conversation
 {
 public:
+    enum class Type {
+        Group,
+        Direct
+    };
+
     Conversation() = default;
     Conversation(QString idValue, QString nameValue, QList<Message> messageList = {}, int unreadCountValue = 0)
         : id(std::move(idValue))
@@ -17,9 +22,20 @@ public:
     {
     }
 
+    static Type typeFromString(const QString &str) {
+        return str == QStringLiteral("direct") ? Type::Direct : Type::Group;
+    }
+
+    static QString typeToString(Type t) {
+        return t == Type::Direct ? QStringLiteral("direct") : QStringLiteral("group");
+    }
+
+    bool isGroup() const { return type == Type::Group; }
+    bool isDirect() const { return type == Type::Direct; }
+
     QString id;
     QString name;
-    QString type = QStringLiteral("group");
+    Type type = Type::Group;
     QString ownerEmail;
     QString lastMessagePreview;
     QString draftText;

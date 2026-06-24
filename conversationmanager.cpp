@@ -43,7 +43,7 @@ void ConversationManager::loadConversations(const QString &backendBaseUrl, const
             Conversation conversation(object.value(QStringLiteral("id")).toString(),
                                       object.value(QStringLiteral("name")).toString(),
                                       {});
-            conversation.type = object.value(QStringLiteral("type")).toString();
+            conversation.type = Conversation::typeFromString(object.value(QStringLiteral("type")).toString());
             conversation.ownerEmail = object.value(QStringLiteral("ownerEmail")).toString();
             const QJsonObject lastMessageObject = object.value(QStringLiteral("lastMessage")).toObject();
             const QString lastMessageText = lastMessageObject.value(QStringLiteral("text")).toString();
@@ -273,7 +273,7 @@ QString ConversationManager::currentRoomName() const
 bool ConversationManager::currentConversationIsGroup() const
 {
     const Conversation *conversation = m_chatStore->currentConversation();
-    return conversation && conversation->type == QStringLiteral("group");
+    return conversation && conversation->isGroup();
 }
 
 bool ConversationManager::selectConversationById(const QString &conversationId)
