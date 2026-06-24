@@ -271,6 +271,12 @@ QList<Message> DatabaseManager::loadMessages(const QString &conversationId, int 
         msg.timestamp = query.value(5).toLongLong();
         msg.status = static_cast<Message::DeliveryStatus>(query.value(6).toInt());
         msg.senderAvatarUrl = query.value(7).toString();
+
+        // Fix: if message has serverMessageId, it was already delivered
+        if (msg.serverMessageId > 0 && msg.status == Message::DeliveryStatus::Sending) {
+            msg.status = Message::DeliveryStatus::Delivered;
+        }
+
         reversed.append(std::move(msg));
     }
 
