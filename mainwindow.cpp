@@ -273,12 +273,9 @@ void MainWindow::sendCurrentMessage()
     m_messageHandler->addPendingConversationMapping(clientMessageId, conversationId);
 
     if (!m_chatClient->isConnected()) {
-        m_chatStore->markMessageQueued(conversationId, clientMessageId);
-        m_messageHandler->restartPendingMessageTimeout(conversationId, clientMessageId);
-        setNetworkStatus(UiText::MainWindow::kStatusConnectRealtimeFirst,
-                         UiText::MainWindow::kStatusMessageQueuedDetail);
-        m_chatClient->connectToServer(QUrl::fromUserInput(m_serverUrlInput->text().trimmed()), m_authToken);
-        m_chatClient->sendChatMessage(displayContent, conversationId, clientMessageId);
+        m_chatStore->markMessageFailed(conversationId, clientMessageId);
+        setNetworkStatus(UiText::MainWindow::kStatusMessageSendFailed,
+                         UiText::MainWindow::kStatusMessageSendFailedDetail);
         saveDraftForConversation(conversationId, QString());
         cancelReply();
         return;
