@@ -156,6 +156,12 @@ ConversationListModel::ConversationListModel(ChatStore *chatStore, QObject *pare
         const QModelIndex changedIndex = index(row, 0);
         emit dataChanged(changedIndex, changedIndex);
     });
+
+    connect(m_chatStore, &ChatStore::conversationMoved, this, [this](int from, int to) {
+        const int destRow = to > from ? to + 1 : to;
+        beginMoveRows(QModelIndex(), from, from, QModelIndex(), destRow);
+        endMoveRows();
+    });
 }
 
 int ConversationListModel::rowCount(const QModelIndex &parent) const

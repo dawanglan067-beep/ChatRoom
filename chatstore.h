@@ -48,6 +48,7 @@ signals:
     void messageAppended(int index);
     void messageUpdated(int index);
     void conversationUpdated(int index);
+    void conversationMoved(int from, int to);
 
 private:
     void rebuildIndexCache();

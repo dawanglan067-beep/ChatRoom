@@ -245,7 +245,7 @@ bool ChatStore::appendMessageToConversation(const QString &conversationId, const
         m_currentConversationIndex = 0;
     }
 
-    emit conversationsReset();
+    emit conversationMoved(index, 0);
     if (m_currentConversationIndex == 0 && msgIndex >= 0) {
         emit messageAppended(msgIndex);
     }
