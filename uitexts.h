@@ -12,7 +12,7 @@ inline const QString kVerifyingCode = QStringLiteral("正在验证验证码...")
 inline const QString kWindowTitle = QStringLiteral("登录");
 inline const QString kTitle = QStringLiteral("邮箱验证码登录");
 inline const QString kDescription =
-    QStringLiteral("客户端通过后端认证接口登录。若 MAIL_MODE=log，验证码会直接显示在这里并打印到后端日志中。");
+    QStringLiteral("输入QQ号或邮箱，点击发送验证码即可登录。验证码会直接显示在下方状态栏。");
 inline const QString kBackendUrlPlaceholder = QStringLiteral("例如：http://127.0.0.1:3000");
 inline const QString kEmailPlaceholder = QStringLiteral("请输入QQ号或邮箱");
 inline const QString kCodePlaceholder = QStringLiteral("请输入6位验证码");
