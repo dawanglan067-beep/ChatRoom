@@ -218,6 +218,14 @@ void MainWindow::setAuthSession(const QString &backendBaseUrl, const QString &au
     loadConversationData();
     updateProfileAvatarBadge();
     refreshConversationHeader();
+
+    // Auto-connect WebSocket after login
+    if (!m_backendBaseUrl.isEmpty() && !m_authToken.isEmpty()) {
+        const QUrl wsUrl = QUrl::fromUserInput(m_serverUrlInput->text().trimmed());
+        if (wsUrl.isValid()) {
+            m_chatClient->connectToServer(wsUrl, m_authToken);
+        }
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
