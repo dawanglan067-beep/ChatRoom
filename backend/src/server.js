@@ -688,7 +688,7 @@ app.post('/api/auth/verify-code', async (req, res) => {
     const session = await createSessionForUser(connection, user.id);
     await connection.commit();
 
-    const token = createJwtToken(user, session.tokenJti);
+    const token = createJwtToken(user, session.tokenJti, config.jwtSecret, config.jwtExpiresIn);
     return res.json({
       ok: true,
       token,
